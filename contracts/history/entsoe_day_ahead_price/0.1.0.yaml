@@ -1,0 +1,42 @@
+name: entsoe_day_ahead_price
+version: 0.1.0
+status: draft
+owner: "João Pedro Cardoso (pipeline); publisher is ENTSO-E"
+description: >-
+  Day-ahead prices for the Portugal bidding zone (document type A44). Draft: to be confirmed
+  against a real payload once the API token is available. Cross-checked against OMIE.
+source:
+  publisher: ENTSO-E Transparency Platform
+  url: "https://web-api.tp.entsoe.eu/api"
+  licence: "ENTSO-E Terms of Use (2023). Day-ahead prices are not on ENTSO-E's CC BY 4.0 open-data list: reuse needs attribution (clause 3.1) and must not harm the primary data owner (OMIE)."
+  attribution: "Source: ENTSO-E Transparency Platform"
+grain: "one price per market time unit"
+primary_key: [interval_start_utc]
+timezone: UTC
+freshness:
+  expected_lag_hours: 0
+  max_age_hours: 36
+fields:
+  - name: interval_start_utc
+    type: timestamp_utc
+    nullable: false
+    description: Start of the interval.
+  - name: price_eur_mwh
+    type: number
+    unit: EUR/MWh
+    nullable: false
+    description: Day-ahead price.
+    range: {min: -500, max: 4000}
+  - name: resolution_minutes
+    type: integer
+    unit: minutes
+    nullable: false
+    description: Length of the interval as published.
+    allowed_values: [15, 60]
+notes:
+  - "Unverified until step 4: whether ENTSO-E returns hourly or 15-minute prices around OMIE's 2025-10-01 switch."
+changelog:
+  - version: 0.1.0
+    date: "2026-11-07"
+    change: "Draft contract, not yet checked against a real payload."
+    breaking: false

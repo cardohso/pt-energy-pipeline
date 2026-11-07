@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Contract migration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "from_version", "to_version", "description", "steps"],
+  "properties": {
+    "contract": {"type": "string"},
+    "from_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "to_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "description": {"type": "string", "minLength": 1},
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["op", "description"],
+        "properties": {
+          "op": {
+            "enum": [
+              "epoch_boundary", "add_field_default", "rename_field",
+              "convert_unit", "cast_type", "drop_field"
+            ]
+          },
+          "description": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}
