@@ -1,0 +1,17 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+
+# Data lives in the private data repo, never here.
+data/
+*.duckdb
+*.duckdb.wal
+.venv-*/
