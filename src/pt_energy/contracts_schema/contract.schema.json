@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Data contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name", "version", "status", "owner", "description", "source", "grain",
+    "primary_key", "timezone", "freshness", "fields", "changelog"
+  ],
+  "properties": {
+    "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+    "status": {"enum": ["draft", "active"]},
+    "owner": {"type": "string", "minLength": 1},
+    "description": {"type": "string", "minLength": 1},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["publisher", "url", "licence", "attribution"],
+      "properties": {
+        "publisher": {"type": "string", "minLength": 1},
+        "url": {"type": "string", "minLength": 1},
+        "licence": {"type": "string", "minLength": 1},
+        "attribution": {"type": "string", "minLength": 1}
+      }
+    },
+    "grain": {"type": "string", "minLength": 1},
+    "resolution_minutes": {"type": "integer", "minimum": 1},
+    "primary_key": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "timezone": {"const": "UTC"},
+    "source_timezone": {"type": "string"},
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected_lag_hours", "max_age_hours"],
+      "properties": {
+        "expected_lag_hours": {"type": "number", "minimum": 0},
+        "max_age_hours": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "type", "nullable", "description"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "type": {"enum": ["string", "integer", "number", "boolean", "date", "timestamp_utc"]},
+          "unit": {"type": "string"},
+          "nullable": {"type": "boolean"},
+          "description": {"type": "string", "minLength": 1},
+          "range": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {"min": {"type": "number"}, "max": {"type": "number"}}
+          },
+          "allowed_values": {"type": "array", "minItems": 1, "items": {"type": ["string", "number"]}}
+        }
+      }
+    },
+    "notes": {"type": "array", "items": {"type": "string"}},
+    "changelog": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "date", "change", "breaking"],
+        "properties": {
+          "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+          "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+          "change": {"type": "string", "minLength": 1},
+          "breaking": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

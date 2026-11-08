@@ -1,0 +1,64 @@
+name: eredes_national_consumption
+version: 1.0.0
+status: active
+owner: "João Pedro Cardoso (pipeline); publisher is E-REDES"
+description: >-
+  Total national electricity consumption by voltage level, every 15 minutes, from the E-REDES
+  open data portal (dataset consumo-total-nacional).
+source:
+  publisher: E-REDES
+  url: "https://e-redes.opendatasoft.com/api/explore/v2.1/catalog/datasets/consumo-total-nacional/records"
+  licence: CC BY 4.0
+  attribution: "Source: E-REDES Open Data Portal (CC BY 4.0)"
+grain: "one record per 15-minute interval for all of Portugal"
+resolution_minutes: 15
+primary_key: [interval_start_utc]
+timezone: UTC
+freshness:
+  expected_lag_hours: 72
+  max_age_hours: 120
+fields:
+  - name: interval_start_utc
+    type: timestamp_utc
+    nullable: false
+    description: Start of the 15-minute interval (portal field datahora, already in UTC).
+  - name: low_voltage_kwh
+    type: number
+    unit: kWh
+    nullable: false
+    description: Consumption of low-voltage (BT) installations.
+    range: {min: 0, max: 5000000}
+  - name: medium_voltage_kwh
+    type: number
+    unit: kWh
+    nullable: false
+    description: Consumption of medium-voltage (MT) installations.
+    range: {min: 0, max: 5000000}
+  - name: high_voltage_kwh
+    type: number
+    unit: kWh
+    nullable: false
+    description: Consumption of high-voltage (AT) installations.
+    range: {min: 0, max: 5000000}
+  - name: very_high_voltage_kwh
+    type: number
+    unit: kWh
+    nullable: false
+    description: Consumption of very-high-voltage (MAT) installations.
+    range: {min: 0, max: 5000000}
+  - name: total_kwh
+    type: number
+    unit: kWh
+    nullable: false
+    description: Sum of the four voltage levels.
+    range: {min: 0, max: 5000000}
+notes:
+  - "Observed 2026-11-07: on the spring-forward day (2026-03-29) the portal lists 4 extra rows for local times that do not exist (01:00 to 01:45), with value 0 and a UTC timestamp that collides with the real 01:00 to 01:45 UTC rows. Staging drops rows whose local time does not exist and logs them."
+  - "Observed 2026-11-07: on the fall-back day (2026-10-25) the portal returned 100 rows and none for 00:00 to 00:45 UTC. To be examined in step 5."
+  - "Ranges are generous first guesses; tightened from history in step 6."
+  - "History starts 2023-01-01."
+changelog:
+  - version: 1.0.0
+    date: "2026-11-07"
+    change: "Initial contract."
+    breaking: false

@@ -1,0 +1,15 @@
+contract: omie_day_ahead_price
+from_version: 1.0.0
+to_version: 2.0.0
+description: >-
+  OMIE moved the day-ahead market to 15-minute periods on 2025-10-01. Hourly history is kept as
+  is, never split into fake 15-minute prices, and tagged with its true resolution.
+steps:
+  - op: epoch_boundary
+    description: >-
+      Trading days before 2025-10-01 (Europe/Madrid) have 24 hourly periods; from that day on they
+      have 92 to 100 quarter-hour periods. The parser picks the epoch from the trading day.
+  - op: add_field_default
+    field: resolution_minutes
+    value: 60
+    description: Existing v1 rows get resolution_minutes = 60. New rows carry 15.

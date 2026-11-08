@@ -1,0 +1,42 @@
+name: entsoe_actual_load
+version: 0.1.0
+status: draft
+owner: "João Pedro Cardoso (pipeline); publisher is ENTSO-E"
+description: >-
+  Actual total load for the Portugal bidding zone (document type A65, process type A16). Draft:
+  to be confirmed against a real payload once the API token is available.
+source:
+  publisher: ENTSO-E Transparency Platform
+  url: "https://web-api.tp.entsoe.eu/api"
+  licence: "ENTSO-E Terms of Use (2023). Actual total load is not on ENTSO-E's CC BY 4.0 open-data list: reuse needs attribution (clause 3.1) and must not harm the primary data owner (REN)."
+  attribution: "Source: ENTSO-E Transparency Platform"
+grain: "one value per market time unit"
+primary_key: [interval_start_utc]
+timezone: UTC
+freshness:
+  expected_lag_hours: 1
+  max_age_hours: 6
+fields:
+  - name: interval_start_utc
+    type: timestamp_utc
+    nullable: false
+    description: Start of the interval.
+  - name: load_mw
+    type: number
+    unit: MW
+    nullable: false
+    description: Average actual total load over the interval.
+    range: {min: 0, max: 15000}
+  - name: resolution_minutes
+    type: integer
+    unit: minutes
+    nullable: false
+    description: Length of the interval as published.
+    allowed_values: [15, 60]
+notes:
+  - "Unverified until step 4: interval length for Portugal."
+changelog:
+  - version: 0.1.0
+    date: "2026-11-07"
+    change: "Draft contract, not yet checked against a real payload."
+    breaking: false

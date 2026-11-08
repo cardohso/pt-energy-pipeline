@@ -27,5 +27,7 @@ jobs:
         run: ruff check . && ruff format --check .
       - name: Type check
         run: mypy
+      - name: Contracts (schema, history, migrations)
+        run: pt-energy contracts check
       - name: Test (no network)
         run: pytest -m "not network" --cov=pt_energy
