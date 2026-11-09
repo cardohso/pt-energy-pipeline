@@ -7,6 +7,7 @@ import re
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -34,6 +35,7 @@ class FakeWeb:
 
     def __init__(self) -> None:
         self.requests: list[httpx.Request] = []
+        self.world: Any = None  # tests/synth.World: serves every feed when set
         self._overrides: dict[tuple[str, str | None], Callable[[], httpx.Response]] = {}
 
     # -- configuration --------------------------------------------------------------------------
@@ -69,6 +71,8 @@ class FakeWeb:
         for key in ((kind, day), (kind, None)):
             if key in self._overrides:
                 return self._overrides[key]()
+        if self.world is not None:
+            return self.world.respond(kind, day)  # type: ignore[no-any-return]
         return _default(kind, day)
 
 

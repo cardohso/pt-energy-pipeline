@@ -1,0 +1,50 @@
+# Thresholds for the data-quality gate. Reviewed like code; every number was set from the real
+# 2026-10-10 to 2026-11-08 backfill (see docs/quality.md). severity: blocking stops publishing,
+# warning is shown on the health panel.
+window_days: 14                      # how far back completeness, cross-checks and drift look
+
+freshness:
+  severity:
+    entsoe_actual_load: blocking
+    entsoe_actual_generation: blocking
+    entsoe_day_ahead_price: blocking
+    omie_day_ahead_price: blocking
+    eredes_national_consumption: warning
+  price_publication_hour_utc: 13     # from this hour on, prices for tomorrow must exist
+
+completeness:
+  severity:
+    entsoe_actual_load: blocking
+    entsoe_actual_generation: blocking
+    entsoe_day_ahead_price: blocking
+    omie_day_ahead_price: blocking
+    eredes_national_consumption: warning
+  series_count_min_ratio: 0.8        # generation series per day vs the window median (warning)
+
+price_cross_check:
+  tolerance_eur_mwh: 0.01            # blocking: OMIE and ENTSO-E publish the same price
+
+demand_cross_check:
+  daily_warn_pct: 4                  # ENTSO-E load vs E-REDES, daily energy
+  daily_block_pct: 10
+  hourly_warn_pct: 15
+
+drift:
+  baseline_days: 14                  # trailing complete days used as the baseline
+  min_baseline_days: 7
+  load: {block_ratio: [0.5, 1.5], warn_z: 5}
+  generation: {block_ratio: [0.3, 2.5], warn_z: 5}
+  price: {warn_z: 8}                 # prices can really move this much; never blocks
+
+frozen:
+  load_hours: 6                      # blocking: identical consecutive hourly load values
+  eredes_quarters: 12                # warning
+
+eredes_total_tolerance_kwh: 1        # warning: total vs sum of the four voltage levels
+
+rejected:
+  incomplete_hour_grace_days: 5      # E-REDES publishes late; recent partial hours are normal
+
+revisions:
+  warn_pct: 5                        # warning when a revised value moves by more than this
+  lookback_days: 7                   # matches the daily refetch window
