@@ -1,7 +1,10 @@
 {
   "history/entsoe_actual_generation/0.1.0.yaml": "4f12d6ea7d705844c21a61e92b9583d9e22c49026e2d8f40a4afc308a963153c",
+  "history/entsoe_actual_generation/1.0.0.yaml": "4dd363760277fee8c18f2598e5de4122bf6bc1b1434f3bc5b1e7b74a247a4c13",
   "history/entsoe_actual_load/0.1.0.yaml": "54661c6a477c253efd6e563edaf8305185c77aea87736fda7c81800cd7f5d395",
+  "history/entsoe_actual_load/1.0.0.yaml": "f4beeadd2a5fc75e86280d94963a027057aca5daddb0af59b986ab55a836dbf8",
   "history/entsoe_day_ahead_price/0.1.0.yaml": "ae945de695e91a03ddd32a79a00b514dad8a56a31ef269e4b2a61c406a885a2f",
+  "history/entsoe_day_ahead_price/1.0.0.yaml": "f5aafebb5351a2f5b917f1d6a784cac7735f2e76b2148c306ad0b684e983e614",
   "history/eredes_national_consumption/1.0.0.yaml": "8cc8384d40e24e55f0506b39628e36775cdb90739915af334af3db484bf05a3a",
   "history/omie_day_ahead_price/1.0.0.yaml": "655acf81feea1183567e8d490067cbb3598ed0912f463f7cdc7d33157535dfe0",
   "history/omie_day_ahead_price/2.0.0.yaml": "861810d74652efff92d70c3fed2439ef24219b386ebb9c027ff48fb19466ded9"
