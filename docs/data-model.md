@@ -10,8 +10,9 @@ meta/       lineage, revisions, rejects, errors, batches
 `pt-energy transform --data-dir D` rebuilds everything from `D/raw` into `D/serving/`:
 `pt_energy.duckdb` plus one Parquet file per table in `staging/`, `model/` and `meta/`.
 It is a pure function of the raw files: delete `serving/` and run it again to get the same tables.
-The build goes to `serving.build/` first and replaces `serving/` only if every raw window parsed;
-otherwise the previous build stays in place and the command exits 1.
+The build goes to `serving.build/` first and replaces `serving/` only if the quality gate passes (see
+[quality.md](quality.md)); otherwise the previous build stays in place, the rejected one is kept in
+`rejected/`, and the command exits 1.
 
 ## Time
 
@@ -56,6 +57,7 @@ omit repeated values are expanded to every slot up to the period's declared end.
 | `meta.revisions` | one row per changed value between successive versions of a window: `key`, `field`, `old_value`, `new_value`, both hashes, `detected_at` |
 | `meta.rejected` | rows not loaded, with a reason (below) |
 | `meta.errors` | raw windows that could not be parsed (they block publishing) |
+| `meta.check_results` | one row per quality check of the build: name, dataset, severity, status (pass, fail, known), message, observed value, threshold, affected days (see [quality.md](quality.md)) |
 | `meta.batches` | one row per build: `batch_id`, `built_at`, `pipeline_version`, `raw_state_sha256` (identifies the exact set of raw files used), `windows` |
 
 ### Lineage

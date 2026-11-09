@@ -1,0 +1,19 @@
+# Defects in publisher data that we have looked at, cannot fix, and accept. A failing check whose
+# affected days are all listed here is reported as "known" instead of failing. Reviewed like code.
+# Each entry names the check, the dataset and the days it covers, and why.
+- id: eredes-2026-10-25-null-timestamps
+  dataset: eredes_national_consumption
+  checks: [completeness, rejected_rows]
+  dates: ["2026-10-25"]
+  reason: >-
+    On the fall-back day E-REDES published 4 rows with no timestamp (labels 24:15 to 25:00) and no
+    rows for 00:00 to 00:45 UTC. The slot of those rows cannot be known, so they are rejected.
+  added: "2026-11-09"
+- id: eredes-2026-11-01-conflicting-duplicates
+  dataset: eredes_national_consumption
+  checks: [completeness, rejected_rows]
+  dates: ["2026-11-01"]
+  reason: >-
+    E-REDES published 01:00 to 01:45 UTC twice with different values and omitted the last three
+    quarters of the day. All copies are rejected because there is no way to tell which is right.
+  added: "2026-11-09"

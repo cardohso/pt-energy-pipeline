@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import typer
@@ -21,6 +21,9 @@ from pt_energy.ingest.runner import (
 )
 from pt_energy.ingest.sources import ALL_DATASETS, build_sources
 from pt_energy.ingest.store import RawStore
+from pt_energy.lineage.graph import render as render_lineage
+from pt_energy.lineage.openlineage import emit_openlineage
+from pt_energy.quality.gate import run_gate, write_report
 from pt_energy.settings import contract_versions, load_dotenv, pipeline_version
 from pt_energy.transform.model import build, swap_directory
 from pt_energy.transform.stage import stage
@@ -28,6 +31,8 @@ from pt_energy.transform.stage import stage
 app = typer.Typer(help="Portugal open-energy batch pipeline.", no_args_is_help=True)
 contracts_app = typer.Typer(help="Data contract checks.", no_args_is_help=True)
 app.add_typer(contracts_app, name="contracts")
+lineage_app = typer.Typer(help="Lineage diagram.", no_args_is_help=True)
+app.add_typer(lineage_app, name="lineage")
 
 ContractsDir = typer.Option(Path("contracts"), "--contracts-dir", help="Contracts directory.")
 DataDir = typer.Option(
@@ -98,6 +103,25 @@ def _run(datasets: list[str], days_for: object, data_dir: Path | None, contracts
         raise typer.Exit(code=1)
 
 
+@lineage_app.command("diagram")
+def lineage_diagram(
+    out: Path = typer.Option(Path("docs/lineage.md"), "--out", help="File to write or check."),
+    contracts_dir: Path = ContractsDir,
+    check: bool = typer.Option(False, "--check", help="Fail if the file is out of date."),
+) -> None:
+    """Generate the lineage diagram from the pipeline definition."""
+    text = render_lineage(contracts_dir)
+    if check:
+        if not out.exists() or out.read_text(encoding="utf-8") != text:
+            typer.echo(f"{out} is out of date: run `pt-energy lineage diagram`")
+            raise typer.Exit(code=1)
+        typer.echo("lineage OK")
+        return
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(text, encoding="utf-8")
+    typer.echo(f"wrote {out}")
+
+
 @app.command()
 def daily(
     lookback: int = typer.Option(7, min=0, help="Refetch this many past days to catch revisions."),
@@ -130,28 +154,52 @@ def backfill(
 
 
 @app.command()
-def transform(data_dir: Path | None = DataDir) -> None:
-    """Rebuild staging and modelled tables (Parquet + DuckDB) from the raw layer.
+def transform(
+    data_dir: Path | None = DataDir,
+    contracts_dir: Path = ContractsDir,
+    now: datetime | None = typer.Option(
+        None, formats=["%Y-%m-%dT%H:%M"], help="Judge freshness as of this UTC time (replays)."
+    ),
+) -> None:
+    """Rebuild the tables from the raw layer, run the quality gate, publish only if it passes.
 
-    Output goes to <data-dir>/serving. If any raw window cannot be parsed, nothing is replaced:
-    the previous build stays in place and the command exits 1.
+    The build goes to <data-dir>/serving.build. If any blocking check fails, nothing is replaced:
+    the previous <data-dir>/serving stays published, the rejected build is kept in
+    <data-dir>/rejected for inspection, a report is written to <data-dir>/reports, and the
+    command exits 1.
     """
     root = data_dir or Path(os.environ.get("PT_ENERGY_DATA_DIR", "data"))
+    moment = now.replace(tzinfo=UTC) if now else utc_now()
     staged = stage(RawStore(root))
-    if len(staged.errors):
-        for e in staged.errors.itertuples():
-            typer.echo(f"PARSE ERROR {e.dataset} {e.raw_window}: {e.message}")
-        typer.echo("serving/ not replaced; fix the raw data or the parser", err=True)
-        raise typer.Exit(code=1)
     candidate = root / "serving.build"
     if candidate.exists():
         shutil.rmtree(candidate)
-    counts = build(staged, candidate)
-    swap_directory(candidate, root / "serving")
-    for name, n in counts.items():
-        typer.echo(f"{name:45} {n:>8}")
-    reasons = staged.rejected["reason"].value_counts().to_dict() if len(staged.rejected) else {}
-    typer.echo(f"rejected rows by reason: {reasons or 'none'}")
+    counts = build(staged, candidate, now=moment)
+    report = run_gate(candidate, contracts_dir=contracts_dir, now=moment)
+    for r in report.blocking:
+        typer.echo(f"BLOCKING {r.dataset} {r.name}: {r.message}")
+    for r in report.warnings:
+        typer.echo(f"warning  {r.dataset} {r.name}: {r.message}")
+    for r in report.known:
+        typer.echo(f"known    {r.dataset} {r.name}: {', '.join(r.known)}")
+    if report.ok:
+        swap_directory(candidate, root / "serving")
+        report.published = True
+    else:
+        rejected = root / "rejected"
+        if rejected.exists():
+            shutil.rmtree(rejected)
+        candidate.rename(rejected)
+    write_report(root / "reports", report)
+    emit_openlineage(root, report, staged, counts)
+    c = report.to_dict()["counts"]
+    typer.echo(
+        f"batch {report.batch_id}: {c['passed']}/{c['checks']} checks passed, "
+        f"{c['blocking_failures']} blocking, {c['warnings']} warnings, {c['known']} known; "
+        + ("published" if report.published else "NOT published, previous build kept")
+    )
+    if not report.ok:
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":

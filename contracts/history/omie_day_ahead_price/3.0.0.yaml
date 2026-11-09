@@ -1,0 +1,54 @@
+name: omie_day_ahead_price
+version: 3.0.0
+status: active
+owner: "João Pedro Cardoso (pipeline); publisher is OMIE"
+description: >-
+  Day-ahead market clearing price for the Portuguese bidding zone, as published by OMIE in one
+  text file per trading day (marginalpdbcpt).
+source:
+  publisher: OMIE - Operador do Mercado Ibérico de Energia
+  url: "https://www.omie.es/es/file-download?parents=marginalpdbcpt&filename=marginalpdbcpt_YYYYMMDD.1"
+  licence: "No explicit licence. OMIE legal notice: cite the source when reusing its information."
+  attribution: "Source: OMIE (www.omie.es)"
+grain: "one clearing price per 15-minute market time unit for the Portuguese bidding zone"
+resolution_minutes: 15
+primary_key: [interval_start_utc]
+timezone: UTC
+source_timezone: Europe/Madrid
+freshness:
+  expected_lag_hours: 0
+  max_age_hours: 36
+fields:
+  - name: interval_start_utc
+    type: timestamp_utc
+    nullable: false
+    description: Start of the delivery period, converted from the OMIE trading day in CET/CEST.
+  - name: resolution_minutes
+    type: integer
+    unit: minutes
+    nullable: false
+    description: Length of the delivery period. 15 from 2025-10-01, 60 for earlier trading days.
+    allowed_values: [15, 60]
+  - name: price_pt_eur_mwh
+    type: number
+    unit: EUR/MWh
+    nullable: false
+    description: Day-ahead clearing price for Portugal.
+    range: {min: -1000, max: 6000}
+notes:
+  - "Files up to and including 2025-09-30 are hourly (24 periods per day); from 2025-10-01 they are 15-minute (92 to 100 periods)."
+  - "Range -1000 to 6000 EUR/MWh sits outside the SDAC harmonised bounds on purpose: the minimum moved from -500 to -600 on 2026-05-28 and the maximum is 4000 or 5000 depending on the source; the check guards against corrupt values, not against the market rules."
+  - "Column order (PT first, ES second) is assumed from the file layout; verified against ENTSO-E in step 4."
+changelog:
+  - version: 3.0.0
+    date: "2026-11-09"
+    change: "Field delivery_start_utc renamed to interval_start_utc (same name in every dataset); price range widened to -1000..6000 EUR/MWh."
+    breaking: true
+  - version: 2.0.0
+    date: "2026-11-07"
+    change: "Grain changes from hourly to 15 minutes (OMIE switched on 2025-10-01); adds resolution_minutes so older hourly rows can coexist."
+    breaking: true
+  - version: 1.0.0
+    date: "2026-11-07"
+    change: "Initial contract: hourly Portuguese day-ahead price."
+    breaking: false

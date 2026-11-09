@@ -6,11 +6,11 @@ a changelog. They are validated against `src/pt_energy/contracts_schema/contract
 
 | Contract | Status | Version | Notes |
 |---|---|---|---|
-| `omie_day_ahead_price` | active | 2.0.0 | 1.0.0 hourly, 2.0.0 15-minute (OMIE switched 2025-10-01) |
-| `eredes_national_consumption` | active | 1.0.0 | CC BY 4.0 |
-| `entsoe_actual_generation` | active | 1.0.0 | hourly, per production type and direction |
-| `entsoe_actual_load` | active | 1.0.0 | hourly |
-| `entsoe_day_ahead_price` | active | 1.0.0 | 15-minute, matches OMIE |
+| `omie_day_ahead_price` | active | 3.0.0 | 1.0.0 hourly, 2.0.0 15-minute (OMIE switched 2025-10-01), 3.0.0 time field renamed to `interval_start_utc` (breaking, with migration) |
+| `eredes_national_consumption` | active | 1.1.0 | CC BY 4.0 |
+| `entsoe_actual_generation` | active | 1.1.0 | hourly, per production type and direction |
+| `entsoe_actual_load` | active | 1.1.0 | hourly |
+| `entsoe_day_ahead_price` | active | 1.1.0 | 15-minute, matches OMIE |
 
 Draft means version `0.x`: no consumers yet, so changes need only a version increase and a
 changelog entry. The three ENTSO-E contracts were drafts until 2026-11-09, when real responses

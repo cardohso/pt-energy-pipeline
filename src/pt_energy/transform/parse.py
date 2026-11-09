@@ -233,7 +233,23 @@ def _expand_period(period: Any, value_tag: str) -> tuple[int, list[tuple[datetim
     return minutes, out
 
 
-def _entsoe_series(body: bytes, value_tag: str) -> list[tuple[Any, int, datetime, float]]:
+_POWER_UNITS = {"quantity_Measure_Unit.name": "MAW"}
+_PRICE_UNITS = {"price_Measure_Unit.name": "MWH", "currency_Unit.name": "EUR"}
+
+
+def _check_units(series: Any, expected: dict[str, str]) -> None:
+    """A changed or missing unit is a schema change: the numbers would silently change meaning."""
+    for tag, wanted in expected.items():
+        got = _child_text(series, tag)
+        if got != wanted:
+            raise ParseError(
+                f"ENTSO-E unit changed: {tag} is {got!r}, the contract says {wanted!r}"
+            )
+
+
+def _entsoe_series(
+    body: bytes, value_tag: str, units: dict[str, str]
+) -> list[tuple[Any, int, datetime, float]]:
     try:
         root = ET.fromstring(body)
     except (ET.ParseError, DefusedXmlException) as exc:
@@ -242,6 +258,7 @@ def _entsoe_series(body: bytes, value_tag: str) -> list[tuple[Any, int, datetime
         raise ParseError("ENTSO-E payload is an acknowledgement, not data")
     out: list[tuple[Any, int, datetime, float]] = []
     for series in (c for c in root if _tag(c) == "TimeSeries"):
+        _check_units(series, units)
         for period in (c for c in series if _tag(c) == "Period"):
             minutes, slots = _expand_period(period, value_tag)
             out += [(series, minutes, at, value) for at, value in slots]
@@ -264,14 +281,14 @@ def _no_duplicates(rows: list[Row], key: tuple[str, ...]) -> list[Row]:
 def parse_entsoe_load(body: bytes) -> tuple[list[Row], list[Row]]:
     rows = [
         {"interval_start_utc": at, "load_mw": value, "resolution_minutes": minutes}
-        for _, minutes, at, value in _entsoe_series(body, "quantity")
+        for _, minutes, at, value in _entsoe_series(body, "quantity", _POWER_UNITS)
     ]
     return _no_duplicates(rows, ("interval_start_utc",)), []
 
 
 def parse_entsoe_generation(body: bytes) -> tuple[list[Row], list[Row]]:
     rows: list[Row] = []
-    for series, minutes, at, value in _entsoe_series(body, "quantity"):
+    for series, minutes, at, value in _entsoe_series(body, "quantity", _POWER_UNITS):
         psr = next((_child_text(c, "psrType") for c in series if _tag(c) == "MktPSRType"), None)
         names = {_tag(c) for c in series}
         if psr is None or not (names & {"inBiddingZone_Domain.mRID", "outBiddingZone_Domain.mRID"}):
@@ -292,6 +309,6 @@ def parse_entsoe_generation(body: bytes) -> tuple[list[Row], list[Row]]:
 def parse_entsoe_price(body: bytes) -> tuple[list[Row], list[Row]]:
     rows = [
         {"interval_start_utc": at, "price_eur_mwh": value, "resolution_minutes": minutes}
-        for _, minutes, at, value in _entsoe_series(body, "price.amount")
+        for _, minutes, at, value in _entsoe_series(body, "price.amount", _PRICE_UNITS)
     ]
     return _no_duplicates(rows, ("interval_start_utc",)), []

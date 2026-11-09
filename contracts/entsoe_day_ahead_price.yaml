@@ -1,5 +1,5 @@
 name: entsoe_day_ahead_price
-version: 1.0.0
+version: 1.1.0
 status: active
 owner: "João Pedro Cardoso (pipeline); publisher is ENTSO-E"
 description: >-
@@ -26,7 +26,7 @@ fields:
     unit: EUR/MWh
     nullable: false
     description: Day-ahead price (ENTSO-E unit name MWH, currency EUR).
-    range: {min: -500, max: 4000}
+    range: {min: -1000, max: 6000}
   - name: resolution_minutes
     type: integer
     unit: minutes
@@ -34,10 +34,15 @@ fields:
     description: Length of the interval as published. 60 for older hourly days.
     allowed_values: [15, 60]
 notes:
+  - "Range -1000 to 6000 EUR/MWh sits outside the SDAC harmonised bounds on purpose (minimum -600 since 2026-05-28; maximum 4000 or 5000): it guards against corrupt values."
   - "Verified 2026-11-09 against real responses for 2026-11-05 and 11-06: 15-minute (PT15M), curve type A03, EUR/MWh. Matched OMIE's Portugal column on 96 of 96 intervals on both days."
   - "Each period covers one Central European day (starts 23:00 or 22:00 UTC the day before). A request for one UTC day returns two overlapping periods; staging picks by interval and keeps the latest version."
   - "A03 series omit points that repeat the previous value: staging expands them."
 changelog:
+  - version: 1.1.0
+    date: "2026-11-09"
+    change: "Range corrected from 30 real days and the current market bounds."
+    breaking: false
   - version: 1.0.0
     date: "2026-11-09"
     change: "Confirmed against real responses: 15-minute, EUR/MWh, adds resolution_minutes."

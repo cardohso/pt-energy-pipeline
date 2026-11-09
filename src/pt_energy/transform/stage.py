@@ -256,7 +256,8 @@ def stage(store: RawStore) -> Staged:
                 )
 
             parsed: dict[str, list[Row]] = {}
-            for sha in store.history(spec.source, spec.dataset, window):
+            # a window reverted to an older version (A, B, A) lists A twice: parse each version once
+            for sha in dict.fromkeys(store.history(spec.source, spec.dataset, window)):
                 body, meta = _read_version(store, spec, window, sha)
                 try:
                     parsed[sha], bad = spec.parser(body)

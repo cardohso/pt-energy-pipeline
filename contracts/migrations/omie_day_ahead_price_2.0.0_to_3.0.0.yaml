@@ -1,0 +1,11 @@
+contract: omie_day_ahead_price
+from_version: 2.0.0
+to_version: 3.0.0
+description: >-
+  The time field is renamed so every dataset uses interval_start_utc. Values, units and grain are
+  unchanged; consumers only need to read the new column name.
+steps:
+  - op: rename_field
+    field_from: delivery_start_utc
+    field_to: interval_start_utc
+    description: Rename the column and the primary key entry. No data conversion.

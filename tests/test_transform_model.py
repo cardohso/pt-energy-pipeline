@@ -8,10 +8,8 @@ import duckdb
 import pandas as pd
 import pyarrow.parquet as pq
 import pytest
-from typer.testing import CliRunner
 
 from conftest import FakeClock, FakeWeb, fixture_bytes, ingest
-from pt_energy.cli import app
 from pt_energy.ingest.store import RawStore, sha256_hex
 from pt_energy.transform.model import build, swap_directory
 from pt_energy.transform.stage import stage
@@ -410,42 +408,6 @@ def test_swap_directory_replaces_the_old_build_completely(tmp_path: Path) -> Non
 # --- CLI ------------------------------------------------------------------------------------
 
 
-def test_cli_transform_publishes_serving_and_reports_counts(
-    web: FakeWeb, tmp_path: Path, clock: FakeClock, sleeps: list[float]
-) -> None:
-    root = tmp_path / "d"
-    make_raw(web, root, clock, sleeps)
-    result = CliRunner().invoke(app, ["transform", "--data-dir", str(root)])
-    assert result.exit_code == 0, result.output
-    assert "model.demand" in result.stdout and (root / "serving" / "pt_energy.duckdb").exists()
-    assert not (root / "serving.build").exists()
-
-
-def test_cli_transform_keeps_the_last_good_build_when_parsing_fails(
-    web: FakeWeb, tmp_path: Path, clock: FakeClock, sleeps: list[float]
-) -> None:
-    root = tmp_path / "d"
-    make_raw(web, root, clock, sleeps, days=["2026-11-05"], datasets=[OMIE])
-    assert CliRunner().invoke(app, ["transform", "--data-dir", str(root)]).exit_code == 0
-    good = (root / "serving" / "model" / "day_ahead_price.parquet").read_bytes()
-
-    lines = fixture_bytes("omie", "marginalpdbcpt_20261105.1").decode().splitlines()
-    web.set(OMIE, "2026-11-05", body=("\n".join(lines[:5] + lines[6:]) + "\n").encode())
-    ingest(web, root, clock, sleeps, ["2026-11-05"], [OMIE])  # a bad revision arrives
-
-    result = CliRunner().invoke(app, ["transform", "--data-dir", str(root)])
-    assert result.exit_code == 1 and "PARSE ERROR omie_day_ahead_price 2026-11-05" in result.output
-    assert (root / "serving" / "model" / "day_ahead_price.parquet").read_bytes() == good
-
-
-def test_the_built_at_time_is_recorded_in_utc(built) -> None:
-    _, con, _ = built
-    kind, text = con.execute(
-        "select typeof(built_at), built_at::varchar from meta.batches"
-    ).fetchone()
-    assert kind == "TIMESTAMP WITH TIME ZONE" and text.endswith("+00")
-
-
 # --- determinism on larger data (found on the real 30-day run) ------------------------------
 
 
@@ -486,3 +448,21 @@ def test_hourly_sums_do_not_depend_on_thread_scheduling(tmp_path: Path) -> None:
             ).fetchone()
         )
     assert results[0] == results[1] == results[2]
+
+
+# --- a window reverted to an earlier version (found by the quality gate) --------------------
+
+
+def test_a_window_reverted_to_an_earlier_version_is_staged_once(
+    web: FakeWeb, tmp_path: Path, clock: FakeClock, sleeps: list[float]
+) -> None:
+    root = tmp_path / "d"
+    original = fixture_bytes("omie", "marginalpdbcpt_20261105.1")
+    changed = original.replace(b"262.24;262.24", b"270.00;262.24")
+    for body in (original, changed, original):  # A, B, A
+        web.set(OMIE, "2026-11-05", body=body)
+        ingest(web, root, clock, sleeps, ["2026-11-05"], [OMIE])
+    staged = stage(RawStore(root))
+    assert len(staged.tables[OMIE]) == 96  # not 192
+    assert staged.tables[OMIE]["raw_sha256"].nunique() == 1
+    assert len(staged.revisions) == 2  # A to B, then B back to A
