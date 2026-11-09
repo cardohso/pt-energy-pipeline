@@ -1,0 +1,70 @@
+name: eredes_national_consumption
+version: 1.0.1
+status: active
+owner: "João Pedro Cardoso (pipeline); publisher is E-REDES"
+description: >-
+  Total national electricity consumption by voltage level, every 15 minutes, from the E-REDES
+  open data portal (dataset consumo-total-nacional).
+source:
+  publisher: E-REDES
+  url: "https://e-redes.opendatasoft.com/api/explore/v2.1/catalog/datasets/consumo-total-nacional/records"
+  licence: CC BY 4.0
+  attribution: "Source: E-REDES Open Data Portal (CC BY 4.0)"
+grain: "one record per 15-minute interval for all of Portugal"
+resolution_minutes: 15
+primary_key: [interval_start_utc]
+timezone: UTC
+freshness:
+  expected_lag_hours: 72
+  max_age_hours: 120
+fields:
+  - name: interval_start_utc
+    type: timestamp_utc
+    nullable: false
+    description: Start of the 15-minute interval (portal field datahora, already in UTC).
+  - name: low_voltage_kwh
+    type: number
+    unit: kWh
+    nullable: false
+    description: Consumption of low-voltage (BT) installations.
+    range: {min: 0, max: 5000000}
+  - name: medium_voltage_kwh
+    type: number
+    unit: kWh
+    nullable: false
+    description: Consumption of medium-voltage (MT) installations.
+    range: {min: 0, max: 5000000}
+  - name: high_voltage_kwh
+    type: number
+    unit: kWh
+    nullable: false
+    description: Consumption of high-voltage (AT) installations.
+    range: {min: 0, max: 5000000}
+  - name: very_high_voltage_kwh
+    type: number
+    unit: kWh
+    nullable: false
+    description: Consumption of very-high-voltage (MAT) installations.
+    range: {min: 0, max: 5000000}
+  - name: total_kwh
+    type: number
+    unit: kWh
+    nullable: false
+    description: Sum of the four voltage levels.
+    range: {min: 0, max: 5000000}
+notes:
+  - "Observed 2026-11-09, spring-forward day (2026-03-29): 4 extra rows for local times that do not exist (01:00 to 01:45), value 0, with a UTC timestamp that collides with real rows. Staging rejects them (nonexistent_local_time)."
+  - "Observed 2026-11-09, fall-back day (2026-10-25): 100 rows, but 4 have a null timestamp (labels 24:15 to 25:00) and the 00:00 to 00:45 UTC slots are missing. The slot of the 4 rows cannot be known, so staging rejects them (no_timestamp) and the gap stays."
+  - "Observed 2026-11-09, 2026-11-01 (not a clock-change day): 4 timestamps (01:00 to 01:45 UTC) appear twice with different values, and the last 3 quarters of the day are missing. Staging rejects every copy (conflicting_duplicate)."
+  - "Recent days are published late and partially (2026-11-04 had 1 of 96 rows on 2026-11-09). Hours with fewer than 4 quarters are left out of hourly demand and listed in meta.rejected."
+  - "Ranges are generous first guesses; tightened from history in step 6."
+  - "History starts 2023-01-01."
+changelog:
+  - version: 1.0.1
+    date: "2026-11-09"
+    change: "Notes only: real irregularities found in the 30-day backfill and how staging treats them."
+    breaking: false
+  - version: 1.0.0
+    date: "2026-11-07"
+    change: "Initial contract."
+    breaking: false
