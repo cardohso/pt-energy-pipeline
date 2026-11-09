@@ -12,6 +12,7 @@ dependencies = [
     "pandas>=2.2",
     "pyarrow>=17",
     "pyyaml>=6",
+    "defusedxml>=0.7",
     "httpx>=0.27",
     "jsonschema>=4.22",
     "typer>=0.12",
@@ -55,6 +56,7 @@ extend-immutable-calls = ["typer.Option", "typer.Argument"]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 markers = ["network: test that needs the network (never run in CI)"]
+filterwarnings = ["ignore:The inplace keyword in DataFrame.drop:Warning"]
 
 [tool.mypy]
 python_version = "3.11"

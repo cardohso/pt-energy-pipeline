@@ -36,5 +36,9 @@ its API returns chart data rather than a data feed) and the **REN monthly balanc
   example pumped storage).
 - ENTSO-E responses carry a new document id and creation time on every request.
 - E-REDES on the spring-forward day (2026-03-29) lists 4 extra rows with value 0 for local times
-  that do not exist; on the fall-back day (2026-10-25) it returned 100 rows and none for
-  00:00 to 00:45 UTC.
+  that do not exist. On the fall-back day (2026-10-25) it returned 100 rows, 4 of them without a
+  timestamp (labels 24:15 to 25:00), and none for 00:00 to 00:45 UTC.
+- E-REDES 2026-11-01 (not a clock-change day) has 4 timestamps twice with different values and is
+  missing its last 3 quarters. Recent days are published late and in parts (2026-11-04 had 1 of 96
+  rows on 2026-11-09).
+- All of this is handled by rejecting the rows, never repairing them: see data-model.md.

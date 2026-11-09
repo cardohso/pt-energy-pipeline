@@ -1,5 +1,5 @@
 name: eredes_national_consumption
-version: 1.0.0
+version: 1.0.1
 status: active
 owner: "João Pedro Cardoso (pipeline); publisher is E-REDES"
 description: >-
@@ -53,11 +53,17 @@ fields:
     description: Sum of the four voltage levels.
     range: {min: 0, max: 5000000}
 notes:
-  - "Observed 2026-11-07: on the spring-forward day (2026-03-29) the portal lists 4 extra rows for local times that do not exist (01:00 to 01:45), with value 0 and a UTC timestamp that collides with the real 01:00 to 01:45 UTC rows. Staging drops rows whose local time does not exist and logs them."
-  - "Observed 2026-11-07: on the fall-back day (2026-10-25) the portal returned 100 rows and none for 00:00 to 00:45 UTC. To be examined in step 5."
+  - "Observed 2026-11-09, spring-forward day (2026-03-29): 4 extra rows for local times that do not exist (01:00 to 01:45), value 0, with a UTC timestamp that collides with real rows. Staging rejects them (nonexistent_local_time)."
+  - "Observed 2026-11-09, fall-back day (2026-10-25): 100 rows, but 4 have a null timestamp (labels 24:15 to 25:00) and the 00:00 to 00:45 UTC slots are missing. The slot of the 4 rows cannot be known, so staging rejects them (no_timestamp) and the gap stays."
+  - "Observed 2026-11-09, 2026-11-01 (not a clock-change day): 4 timestamps (01:00 to 01:45 UTC) appear twice with different values, and the last 3 quarters of the day are missing. Staging rejects every copy (conflicting_duplicate)."
+  - "Recent days are published late and partially (2026-11-04 had 1 of 96 rows on 2026-11-09). Hours with fewer than 4 quarters are left out of hourly demand and listed in meta.rejected."
   - "Ranges are generous first guesses; tightened from history in step 6."
   - "History starts 2023-01-01."
 changelog:
+  - version: 1.0.1
+    date: "2026-11-09"
+    change: "Notes only: real irregularities found in the 30-day backfill and how staging treats them."
+    breaking: false
   - version: 1.0.0
     date: "2026-11-07"
     change: "Initial contract."

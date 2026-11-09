@@ -38,6 +38,7 @@ class RawStore:
     def __init__(self, root: Path) -> None:
         self.root = root
         self._latest: dict[tuple[str, str, str], str] | None = None
+        self._history: dict[tuple[str, str, str], list[str]] = {}
 
     # -- layout ---------------------------------------------------------------------------------
     @property
@@ -55,11 +56,22 @@ class RawStore:
                 for line in self.log_path.read_text(encoding="utf-8").splitlines():
                     entry = json.loads(line)
                     if entry.get("sha256") and entry["status"] in ("new", "unchanged", "revised"):
-                        latest[(entry["source"], entry["dataset"], entry["window"])] = entry[
-                            "sha256"
-                        ]
+                        key = (entry["source"], entry["dataset"], entry["window"])
+                        latest[key] = entry["sha256"]
+                        chain = self._history.setdefault(key, [])
+                        if not chain or chain[-1] != entry["sha256"]:
+                            chain.append(entry["sha256"])
             self._latest = latest
         return self._latest
+
+    def history(self, source: str, dataset: str, window: str) -> list[str]:
+        """Content hashes of a window in the order they became current (oldest first)."""
+        self._latest_by_window()
+        return list(self._history.get((source, dataset, window), []))
+
+    def windows(self, source: str, dataset: str) -> list[str]:
+        """Every window that has a current version, sorted."""
+        return sorted(w for (s, d, w) in self._latest_by_window() if (s, d) == (source, dataset))
 
     def current_sha(self, source: str, dataset: str, window: str) -> str | None:
         return self._latest_by_window().get((source, dataset, window))
@@ -136,7 +148,11 @@ class RawStore:
         with self.log_path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(entry, sort_keys=True) + "\n")
         if result.sha256 and result.status in ("new", "unchanged", "revised"):
-            self._latest_by_window()[(result.source, result.dataset, result.window)] = result.sha256
+            key = (result.source, result.dataset, result.window)
+            self._latest_by_window()[key] = result.sha256
+            chain = self._history.setdefault(key, [])
+            if not chain or chain[-1] != result.sha256:
+                chain.append(result.sha256)
 
     def write_run_report(self, run_id: str, report: dict[str, Any]) -> Path:
         path = self.root / "raw" / "_runs" / f"{run_id}.json"
