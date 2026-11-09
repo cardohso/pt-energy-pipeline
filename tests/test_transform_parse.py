@@ -206,7 +206,13 @@ def gl_doc(series: str) -> bytes:
 
 
 def series_xml(
-    start: str, end: str, res: str, points: dict[int, float], psr: str = "B16", zone: str = "in"
+    start: str,
+    end: str,
+    res: str,
+    points: dict[int, float],
+    psr: str = "B16",
+    zone: str = "in",
+    unit: str = "MAW",
 ) -> str:
     pts = "".join(
         f"<Point><position>{p}</position><quantity>{v}</quantity></Point>"
@@ -214,6 +220,7 @@ def series_xml(
     )
     return (
         f"<TimeSeries><mRID>1</mRID><{zone}BiddingZone_Domain.mRID>PT</{zone}BiddingZone_Domain.mRID>"
+        f"<quantity_Measure_Unit.name>{unit}</quantity_Measure_Unit.name>"
         f"<MktPSRType><psrType>{psr}</psrType></MktPSRType><curveType>A03</curveType>"
         f"<Period><timeInterval><start>{start}</start><end>{end}</end></timeInterval>"
         f"<resolution>{res}</resolution>{pts}</Period></TimeSeries>"
@@ -275,7 +282,7 @@ def test_entsoe_price_day_length_follows_the_period_not_a_fixed_96(
     pts = "".join("<Point><position>1</position><price.amount>1.5</price.amount></Point>")
     ns = "urn:iec62325.351:tc57wg16:451-3:publicationdocument:7:3"
     xml = (
-        f'<Publication_MarketDocument xmlns="{ns}"><TimeSeries><Period><timeInterval><start>{start}</start>'
+        f'<Publication_MarketDocument xmlns="{ns}"><TimeSeries><currency_Unit.name>EUR</currency_Unit.name><price_Measure_Unit.name>MWH</price_Measure_Unit.name><Period><timeInterval><start>{start}</start>'
         f"<end>{end}</end></timeInterval><resolution>PT15M</resolution>{pts}</Period></TimeSeries>"
         "</Publication_MarketDocument>"
     ).encode()
@@ -344,7 +351,7 @@ def test_entsoe_rejects_broken_documents(body: bytes, message: str) -> None:
 
 def test_entsoe_generation_series_without_direction_is_an_error() -> None:
     xml = gl_doc(
-        "<TimeSeries><MktPSRType><psrType>B16</psrType></MktPSRType><Period><timeInterval>"
+        "<TimeSeries><quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name><MktPSRType><psrType>B16</psrType></MktPSRType><Period><timeInterval>"
         "<start>2026-11-05T00:00Z</start><end>2026-11-05T01:00Z</end></timeInterval>"
         "<resolution>PT60M</resolution><Point><position>1</position><quantity>1</quantity></Point>"
         "</Period></TimeSeries>"
@@ -360,3 +367,33 @@ def test_entsoe_entity_expansion_attack_is_refused() -> None:
     )
     with pytest.raises(ParseError, match="not valid or safe XML"):
         parse_entsoe_load(bomb)
+
+
+# --- units: a changed unit is a schema change, never a silent re-interpretation --------------
+
+
+@pytest.mark.parametrize("unit", ["KAW", "MWH", "", "mw"])
+def test_entsoe_power_series_with_another_unit_is_refused(unit: str) -> None:
+    xml = gl_doc(series_xml("2026-11-05T00:00Z", "2026-11-05T02:00Z", "PT60M", {1: 1.0}, unit=unit))
+    with pytest.raises(ParseError, match="unit changed"):
+        parse_entsoe_generation(xml)
+    with pytest.raises(ParseError, match="unit changed"):
+        parse_entsoe_load(xml)
+
+
+def test_entsoe_price_in_another_currency_or_unit_is_refused() -> None:
+    good = fixture_bytes("entsoe", "price_2026-11-05.xml")
+    for old, new in (
+        (b"<currency_Unit.name>EUR<", b"<currency_Unit.name>GBP<"),
+        (b"<price_Measure_Unit.name>MWH<", b"<price_Measure_Unit.name>KWH<"),
+    ):
+        assert old in good
+        with pytest.raises(ParseError, match="unit changed"):
+            parse_entsoe_price(good.replace(old, new))
+
+
+def test_entsoe_series_without_a_unit_is_refused() -> None:
+    xml = gl_doc(series_xml("2026-11-05T00:00Z", "2026-11-05T02:00Z", "PT60M", {1: 1.0}))
+    xml = xml.replace(b"<quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name>", b"")
+    with pytest.raises(ParseError, match="unit changed"):
+        parse_entsoe_load(xml)

@@ -1,5 +1,5 @@
 name: entsoe_actual_load
-version: 1.0.0
+version: 1.1.0
 status: active
 owner: "João Pedro Cardoso (pipeline); publisher is ENTSO-E"
 description: >-
@@ -26,7 +26,7 @@ fields:
     unit: MW
     nullable: false
     description: Average actual total load over the hour (ENTSO-E unit name MAW).
-    range: {min: 0, max: 15000}
+    range: {min: 0, max: 12000}
   - name: resolution_minutes
     type: integer
     unit: minutes
@@ -34,9 +34,14 @@ fields:
     description: Length of the interval as published.
     allowed_values: [60]
 notes:
+  - "Range 0 to 12000 MW: observed 3687 to 8134 MW over 30 real days."
   - "Verified 2026-11-09 against a real response for 2026-11-05: hourly (PT60M), unit MAW, curve type A03, 24 points."
   - "Cross-check against E-REDES needs E-REDES summed from 15 minutes to the hour and converted from kWh to MW."
 changelog:
+  - version: 1.1.0
+    date: "2026-11-09"
+    change: "Range corrected from 30 real days and the current market bounds."
+    breaking: false
   - version: 1.0.0
     date: "2026-11-09"
     change: "Confirmed against a real response: hourly, MW."

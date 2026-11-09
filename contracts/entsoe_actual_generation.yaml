@@ -1,5 +1,5 @@
 name: entsoe_actual_generation
-version: 1.0.0
+version: 1.1.0
 status: active
 owner: "João Pedro Cardoso (pipeline); publisher is ENTSO-E"
 description: >-
@@ -37,7 +37,7 @@ fields:
     unit: MW
     nullable: false
     description: Average actual power over the hour (ENTSO-E unit name MAW).
-    range: {min: 0, max: 20000}
+    range: {min: 0, max: 12000}
   - name: resolution_minutes
     type: integer
     unit: minutes
@@ -45,11 +45,16 @@ fields:
     description: Length of the interval as published.
     allowed_values: [60]
 notes:
+  - "Range 0 to 12000 MW per production type: observed maximum 4714 MW (wind onshore) over 30 real days."
   - "Verified 2026-11-09 against real responses for 2026-11-05: hourly (PT60M), unit MAW, curve type A03."
   - "A03 series omit points whose value repeats the previous one: staging expands them before any completeness check."
   - "Types B04, B05, B10, B11 and B12 appeared as both generation and consumption series on 2026-11-05."
   - "Types seen for Portugal on that day: B01, B04, B05, B10, B11, B12, B16, B18, B19, B20."
 changelog:
+  - version: 1.1.0
+    date: "2026-11-09"
+    change: "Range corrected from 30 real days and the current market bounds."
+    breaking: false
   - version: 1.0.0
     date: "2026-11-09"
     change: "Confirmed against real responses: hourly, adds direction (generation or consumption) to the primary key, adds resolution_minutes, lists allowed production types."
