@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
+<mRID>synthetic</mRID><revisionNumber>1</revisionNumber><createdDateTime>2026-11-05T12:00:00Z</createdDateTime><type>A75</type><process.processType>A16</process.processType>
+<time_Period.timeInterval><start>2026-11-05T00:00Z</start><end>2026-11-06T00:00Z</end></time_Period.timeInterval>
+<TimeSeries><mRID>1</mRID><businessType>A01</businessType><objectAggregation>A08</objectAggregation>
+<inBiddingZone_Domain.mRID codingScheme="A01">10YPT-REN------W</inBiddingZone_Domain.mRID>
+<quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name><curveType>A03</curveType>
+<MktPSRType><psrType>B16</psrType></MktPSRType>
+<Period><timeInterval><start>2026-11-05T00:00Z</start><end>2026-11-06T00:00Z</end></timeInterval><resolution>PT60M</resolution>
+<Point><position>1</position><quantity>0.0</quantity></Point>
+<Point><position>8</position><quantity>116.7</quantity></Point>
+<Point><position>9</position><quantity>340.6</quantity></Point>
+<Point><position>10</position><quantity>537.0</quantity></Point>
+<Point><position>11</position><quantity>689.8</quantity></Point>
+<Point><position>12</position><quantity>786.8</quantity></Point>
+<Point><position>13</position><quantity>820.0</quantity></Point>
+<Point><position>14</position><quantity>786.8</quantity></Point>
+<Point><position>15</position><quantity>689.8</quantity></Point>
+<Point><position>16</position><quantity>537.0</quantity></Point>
+<Point><position>17</position><quantity>340.6</quantity></Point>
+<Point><position>18</position><quantity>116.7</quantity></Point>
+<Point><position>19</position><quantity>0.0</quantity></Point>
+</Period></TimeSeries>
+<TimeSeries><mRID>2</mRID><businessType>A01</businessType><objectAggregation>A08</objectAggregation>
+<inBiddingZone_Domain.mRID codingScheme="A01">10YPT-REN------W</inBiddingZone_Domain.mRID>
+<quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name><curveType>A03</curveType>
+<MktPSRType><psrType>B19</psrType></MktPSRType>
+<Period><timeInterval><start>2026-11-05T00:00Z</start><end>2026-11-06T00:00Z</end></timeInterval><resolution>PT60M</resolution>
+<Point><position>1</position><quantity>1500.0</quantity></Point>
+<Point><position>2</position><quantity>1579.5</quantity></Point>
+<Point><position>3</position><quantity>1655.8</quantity></Point>
+<Point><position>4</position><quantity>1725.9</quantity></Point>
+<Point><position>5</position><quantity>1786.9</quantity></Point>
+<Point><position>6</position><quantity>1836.6</quantity></Point>
+<Point><position>7</position><quantity>1872.8</quantity></Point>
+<Point><position>8</position><quantity>1894.2</quantity></Point>
+<Point><position>9</position><quantity>1899.8</quantity></Point>
+<Point><position>10</position><quantity>1889.5</quantity></Point>
+<Point><position>11</position><quantity>1863.7</quantity></Point>
+<Point><position>12</position><quantity>1823.4</quantity></Point>
+<Point><position>13</position><quantity>1770.2</quantity></Point>
+<Point><position>14</position><quantity>1706.2</quantity></Point>
+<Point><position>15</position><quantity>1634.0</quantity></Point>
+<Point><position>16</position><quantity>1556.4</quantity></Point>
+<Point><position>17</position><quantity>1476.7</quantity></Point>
+<Point><position>18</position><quantity>1397.8</quantity></Point>
+<Point><position>19</position><quantity>1323.0</quantity></Point>
+<Point><position>20</position><quantity>1255.3</quantity></Point>
+<Point><position>21</position><quantity>1197.3</quantity></Point>
+<Point><position>22</position><quantity>1151.4</quantity></Point>
+<Point><position>23</position><quantity>1119.4</quantity></Point>
+<Point><position>24</position><quantity>1102.5</quantity></Point>
+</Period></TimeSeries>
+<TimeSeries><mRID>3</mRID><businessType>A01</businessType><objectAggregation>A08</objectAggregation>
+<inBiddingZone_Domain.mRID codingScheme="A01">10YPT-REN------W</inBiddingZone_Domain.mRID>
+<quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name><curveType>A03</curveType>
+<MktPSRType><psrType>B04</psrType></MktPSRType>
+<Period><timeInterval><start>2026-11-05T00:00Z</start><end>2026-11-06T00:00Z</end></timeInterval><resolution>PT60M</resolution>
+<Point><position>1</position><quantity>700.0</quantity></Point>
+</Period></TimeSeries>
+<TimeSeries><mRID>4</mRID><businessType>A01</businessType><objectAggregation>A08</objectAggregation>
+<inBiddingZone_Domain.mRID codingScheme="A01">10YPT-REN------W</inBiddingZone_Domain.mRID>
+<quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name><curveType>A03</curveType>
+<MktPSRType><psrType>B10</psrType></MktPSRType>
+<Period><timeInterval><start>2026-11-05T00:00Z</start><end>2026-11-06T00:00Z</end></timeInterval><resolution>PT60M</resolution>
+<Point><position>1</position><quantity>0.0</quantity></Point>
+<Point><position>11</position><quantity>310.5</quantity></Point>
+<Point><position>17</position><quantity>0.0</quantity></Point>
+</Period></TimeSeries>
+<TimeSeries><mRID>5</mRID><businessType>A01</businessType><objectAggregation>A08</objectAggregation>
+<outBiddingZone_Domain.mRID codingScheme="A01">10YPT-REN------W</outBiddingZone_Domain.mRID>
+<quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name><curveType>A03</curveType>
+<MktPSRType><psrType>B10</psrType></MktPSRType>
+<Period><timeInterval><start>2026-11-05T00:00Z</start><end>2026-11-06T00:00Z</end></timeInterval><resolution>PT60M</resolution>
+<Point><position>1</position><quantity>250.0</quantity></Point>
+<Point><position>7</position><quantity>0.0</quantity></Point>
+</Period></TimeSeries>
+</GL_MarketDocument>
