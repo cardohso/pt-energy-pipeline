@@ -135,3 +135,31 @@ def tree(root: Path, skip: tuple[str, ...] = ("_log", "_runs")) -> dict[str, byt
         for p in sorted(root.rglob("*"))
         if p.is_file() and not any(part in skip for part in p.relative_to(root).parts)
     }
+
+
+def ingest(
+    web: FakeWeb,
+    root: Path,
+    clock: FakeClock,
+    sleeps: list[float],
+    days: list[str],
+    datasets: list[str] | None = None,
+) -> None:
+    """Fetch ``days`` for ``datasets`` from the fake web into the raw layer at ``root``."""
+    from datetime import date
+
+    from pt_energy.ingest.runner import run_ingest
+    from pt_energy.ingest.sources import build_sources
+    from pt_energy.ingest.store import RawStore
+
+    sources = build_sources(datasets or [], TOKEN)
+    parsed_days = [date.fromisoformat(d) for d in days]
+    run_ingest(
+        [(s, parsed_days) for s in sources],
+        client=web.client(),
+        store=RawStore(root),
+        pipeline_version="test-sha",
+        contract_versions={s.dataset: "1.0.0" for s in sources},
+        now=clock,
+        sleep=sleeps.append,
+    )

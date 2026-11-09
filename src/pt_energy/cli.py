@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 from datetime import date, datetime
 from pathlib import Path
 
@@ -21,6 +22,8 @@ from pt_energy.ingest.runner import (
 from pt_energy.ingest.sources import ALL_DATASETS, build_sources
 from pt_energy.ingest.store import RawStore
 from pt_energy.settings import contract_versions, load_dotenv, pipeline_version
+from pt_energy.transform.model import build, swap_directory
+from pt_energy.transform.stage import stage
 
 app = typer.Typer(help="Portugal open-energy batch pipeline.", no_args_is_help=True)
 contracts_app = typer.Typer(help="Data contract checks.", no_args_is_help=True)
@@ -124,6 +127,31 @@ def backfill(
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(code=2) from exc
     _run(datasets or [], lambda _s: days, data_dir, contracts_dir)
+
+
+@app.command()
+def transform(data_dir: Path | None = DataDir) -> None:
+    """Rebuild staging and modelled tables (Parquet + DuckDB) from the raw layer.
+
+    Output goes to <data-dir>/serving. If any raw window cannot be parsed, nothing is replaced:
+    the previous build stays in place and the command exits 1.
+    """
+    root = data_dir or Path(os.environ.get("PT_ENERGY_DATA_DIR", "data"))
+    staged = stage(RawStore(root))
+    if len(staged.errors):
+        for e in staged.errors.itertuples():
+            typer.echo(f"PARSE ERROR {e.dataset} {e.raw_window}: {e.message}")
+        typer.echo("serving/ not replaced; fix the raw data or the parser", err=True)
+        raise typer.Exit(code=1)
+    candidate = root / "serving.build"
+    if candidate.exists():
+        shutil.rmtree(candidate)
+    counts = build(staged, candidate)
+    swap_directory(candidate, root / "serving")
+    for name, n in counts.items():
+        typer.echo(f"{name:45} {n:>8}")
+    reasons = staged.rejected["reason"].value_counts().to_dict() if len(staged.rejected) else {}
+    typer.echo(f"rejected rows by reason: {reasons or 'none'}")
 
 
 if __name__ == "__main__":
