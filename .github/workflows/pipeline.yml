@@ -1,0 +1,139 @@
+name: Pipeline
+
+# Daily run: fetch, build, quality gate, persist, alert. Manual runs can backfill a date range.
+# Data lives in a private repository (DATA_REPOSITORY), pushed with a deploy key; see
+# docs/decisions.md for why and docs/operations.md for setup.
+
+on:
+  schedule:
+    # After E-REDES refreshes (about 14:35 UTC) and long after day-ahead prices (about 11:45 UTC).
+    - cron: "30 15 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "daily refetches the last days; backfill fetches a date range"
+        type: choice
+        options: [daily, backfill]
+        default: daily
+      lookback:
+        description: "daily: how many past days to refetch"
+        default: "7"
+      start:
+        description: "backfill: first day, YYYY-MM-DD"
+        required: false
+      end:
+        description: "backfill: last day, YYYY-MM-DD (included)"
+        required: false
+      datasets:
+        description: "dataset names separated by spaces; empty means all"
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+# One run at a time: two runs would race to push the data repository.
+concurrency:
+  group: pipeline
+  cancel-in-progress: false
+
+env:
+  DATA_REPOSITORY: cardohso/pt-energy-data
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    # ENTSO-E answers in about 10 s per request: a daily run takes about 5 minutes, a 30-day
+    # backfill about 15.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out the data repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.DATA_REPOSITORY }}
+          ssh-key: ${{ secrets.DATA_DEPLOY_KEY }}
+          path: data
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Record start time
+        id: start
+        run: echo "at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch
+        id: ingest
+        # A failed window must not stop the run: what was fetched is stored, the gate decides.
+        continue-on-error: true
+        env:
+          ENTSOE_API_TOKEN: ${{ secrets.ENTSOE_API_TOKEN }}
+          PT_ENERGY_DATA_DIR: data
+          MODE: ${{ inputs.mode }}
+          LOOKBACK: ${{ inputs.lookback }}
+          START: ${{ inputs.start }}
+          END: ${{ inputs.end }}
+          DATASETS: ${{ inputs.datasets }}
+        run: |
+          args=()
+          for d in $DATASETS; do args+=(-d "$d"); done
+          if [ "${MODE:-daily}" = "backfill" ]; then
+            pt-energy backfill --start "$START" --end "$END" "${args[@]}"
+          else
+            pt-energy daily --lookback "${LOOKBACK:-7}" "${args[@]}"
+          fi
+
+      - name: Build tables and run the quality gate
+        id: transform
+        continue-on-error: true
+        env:
+          PT_ENERGY_DATA_DIR: data
+        run: pt-energy transform
+
+      - name: Persist data
+        if: always()
+        env:
+          RUN_ID: ${{ github.run_id }}
+          EVENT: ${{ github.event_name }}
+        run: scripts/persist_data.sh data "data - run $RUN_ID ($EVENT)"
+
+      - name: Keep a refused build for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rejected-build
+          path: data/rejected
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f data/reports/latest.json ]; then
+            jq -r '"### Batch \(.batch_id)\n\(.counts.passed) of \(.counts.checks) checks passed, \(.counts.blocking_failures) blocking, \(.counts.warnings) warnings, \(.counts.known) known. Published: \(.published)."' data/reports/latest.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Open, refresh or close alert issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PT_ENERGY_DATA_DIR: data
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SINCE: ${{ steps.start.outputs.at }}
+          RUN_FAILED: ${{ steps.ingest.outcome == 'failure' || steps.transform.outcome == 'failure' || job.status == 'failure' }}
+        run: |
+          flag=""
+          if [ "$RUN_FAILED" = "true" ]; then flag="--workflow-failed"; fi
+          pt-energy alert --run-url "$RUN_URL" --since "$SINCE" $flag
+
+      - name: Fail the run if anything failed
+        if: steps.ingest.outcome == 'failure' || steps.transform.outcome == 'failure'
+        run: |
+          echo "ingest: ${{ steps.ingest.outcome }}, transform: ${{ steps.transform.outcome }}"
+          exit 1
