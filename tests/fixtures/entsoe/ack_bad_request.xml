@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Acknowledgement_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-1:acknowledgementdocument:7:0">
+<mRID>synthetic</mRID><Reason><code>400</code><text>Unexpected parameter</text></Reason>
+</Acknowledgement_MarketDocument>

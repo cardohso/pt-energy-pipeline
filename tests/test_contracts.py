@@ -325,7 +325,7 @@ def test_schema_errors_on_valid_contract_is_empty() -> None:
 
 
 def test_cli_check_passes_on_repo_contracts() -> None:
-    result = CliRunner().invoke(app, ["contracts", "check", "--dir", str(REPO_CONTRACTS)])
+    result = CliRunner().invoke(app, ["contracts", "check", "--contracts-dir", str(REPO_CONTRACTS)])
     assert result.exit_code == 0
     assert "contracts OK" in result.stdout
 
@@ -334,6 +334,6 @@ def test_cli_check_fails_with_exit_code_1_and_names_the_problem(tmp_path: Path) 
     v1 = base_contract()
     release(tmp_path, v1)
     release(tmp_path, next_version(v1, "1.1.0", breaking=False, mutate=drop_price))
-    result = CliRunner().invoke(app, ["contracts", "check", "--dir", str(tmp_path)])
+    result = CliRunner().invoke(app, ["contracts", "check", "--contracts-dir", str(tmp_path)])
     assert result.exit_code == 1
     assert "FAIL" in result.stdout

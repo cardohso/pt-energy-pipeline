@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
+<mRID>synthetic</mRID><revisionNumber>1</revisionNumber><createdDateTime>2026-11-05T12:00:00Z</createdDateTime><type>A65</type><process.processType>A16</process.processType>
+<time_Period.timeInterval><start>2026-11-05T00:00Z</start><end>2026-11-06T00:00Z</end></time_Period.timeInterval>
+<TimeSeries><mRID>1</mRID><businessType>A04</businessType><objectAggregation>A01</objectAggregation>
+<outBiddingZone_Domain.mRID codingScheme="A01">10YPT-REN------W</outBiddingZone_Domain.mRID>
+<quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name><curveType>A03</curveType>
+<Period><timeInterval><start>2026-11-05T00:00Z</start><end>2026-11-06T00:00Z</end></timeInterval><resolution>PT60M</resolution>
+<Point><position>1</position><quantity>3400.0</quantity></Point>
+<Point><position>2</position><quantity>3433.7</quantity></Point>
+<Point><position>3</position><quantity>3526.6</quantity></Point>
+<Point><position>4</position><quantity>3672.6</quantity></Point>
+<Point><position>5</position><quantity>3862.0</quantity></Point>
+<Point><position>6</position><quantity>4082.1</quantity></Point>
+<Point><position>7</position><quantity>4318.0</quantity></Point>
+<Point><position>8</position><quantity>4553.9</quantity></Point>
+<Point><position>9</position><quantity>4774.0</quantity></Point>
+<Point><position>10</position><quantity>4963.4</quantity></Point>
+<Point><position>11</position><quantity>5109.4</quantity></Point>
+<Point><position>12</position><quantity>5202.3</quantity></Point>
+<Point><position>13</position><quantity>5236.0</quantity></Point>
+<Point><position>14</position><quantity>5208.3</quantity></Point>
+<Point><position>15</position><quantity>5121.4</quantity></Point>
+<Point><position>16</position><quantity>4981.4</quantity></Point>
+<Point><position>17</position><quantity>4798.0</quantity></Point>
+<Point><position>18</position><quantity>4583.9</quantity></Point>
+<Point><position>19</position><quantity>4354.0</quantity></Point>
+<Point><position>20</position><quantity>4124.1</quantity></Point>
+<Point><position>21</position><quantity>3910.0</quantity></Point>
+<Point><position>22</position><quantity>3726.6</quantity></Point>
+<Point><position>23</position><quantity>3586.6</quantity></Point>
+<Point><position>24</position><quantity>3499.7</quantity></Point>
+</Period></TimeSeries>
+</GL_MarketDocument>
