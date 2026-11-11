@@ -10,6 +10,7 @@ from pathlib import Path
 import typer
 
 from pt_energy import __version__
+from pt_energy.alerts import GhCli, apply_alerts, build_alerts, latest_ingest_report, latest_json
 from pt_energy.contracts import check_contracts, freeze
 from pt_energy.ingest import http as ingest_http
 from pt_energy.ingest.runner import (
@@ -120,6 +121,38 @@ def lineage_diagram(
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text, encoding="utf-8")
     typer.echo(f"wrote {out}")
+
+
+@app.command()
+def alert(
+    data_dir: Path | None = DataDir,
+    run_url: str | None = typer.Option(None, help="Link to the workflow run, shown in the issue."),
+    since: str | None = typer.Option(
+        None, help="UTC time this run started (YYYY-MM-DDTHH:MM:SSZ); older reports are ignored."
+    ),
+    workflow_failed: bool = typer.Option(False, "--workflow-failed", help="The run itself failed."),
+    repo: str | None = typer.Option(
+        None, envvar="GITHUB_REPOSITORY", help="owner/name for issues."
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Print the issues instead of touching GitHub."
+    ),
+) -> None:
+    """Open, refresh or close GitHub issues from this run's quality and ingestion reports."""
+    root = data_dir or Path(os.environ.get("PT_ENERGY_DATA_DIR", "data"))
+    gate = latest_json(root / "reports" / "latest.json", since, "checked_at")
+    ingest = latest_ingest_report(root / "raw", since)
+    alerts = build_alerts(gate, ingest, run_url=run_url, workflow_failed=workflow_failed)
+    if dry_run or not repo:
+        for a in alerts:
+            typer.echo(f"## {a.title} [{a.label}]\n{a.body}")
+        typer.echo(f"{len(alerts)} alert(s); nothing sent" + ("" if dry_run else " (no --repo)"))
+        return
+    for line in apply_alerts(
+        GhCli(repo), alerts, run_url=run_url, batch=gate["batch_id"] if gate else ""
+    ):
+        typer.echo(line)
+    typer.echo(f"{len(alerts)} alert(s) raised")
 
 
 @app.command()
