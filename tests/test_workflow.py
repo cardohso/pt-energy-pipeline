@@ -187,9 +187,12 @@ def test_every_command_the_workflow_calls_exists_with_the_options_it_passes(
     wf: dict[str, Any],
 ) -> None:
     runner = CliRunner()
+    ansi = re.compile(r"\x1b\[[0-9;]*m")  # CI colours the help text; the codes split option names
     for s in steps(wf):
         for cmd, rest in re.findall(r"pt-energy (\w+)([^\n]*)", s.get("run", "")):
-            help_text = runner.invoke(app, [cmd, "--help"]).stdout
+            help_text = ansi.sub(
+                "", runner.invoke(app, [cmd, "--help"], env={"COLUMNS": "200"}).stdout
+            )
             assert help_text, f"unknown command {cmd}"
             for opt in re.findall(r"(--[\w-]+)", rest):
                 assert opt in help_text, f"{cmd} has no option {opt}"
