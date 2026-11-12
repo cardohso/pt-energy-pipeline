@@ -35,7 +35,7 @@ def gate(
     blocking = blocking or []
     return {
         "batch_id": "20261109T150000Z", "raw_state_sha256": "ab" * 32, "checked_at": "2026-11-09T15:00:00Z",
-        "ok": not blocking if ok is None else ok, "published": not blocking,
+        "ok": not blocking if ok is None else ok, "published": not blocking, "previous_build": True,
         "counts": {"checks": 57, "passed": 56 - len(blocking), "blocking_failures": len(blocking), "warnings": 0, "known": 0},
         "affected_days": sorted({d for b in blocking for d in b["affected"]}),
         "blocking": blocking, "warnings": [], "known": [], "issue_worthy": issue_worthy or list(blocking), "results": [],
@@ -137,6 +137,15 @@ def test_a_blocking_check_raises_an_issue_naming_the_check_the_days_and_the_batc
         "known_issues.yaml",
     ):
         assert needle in alert.body, needle
+
+
+def test_the_first_ever_build_being_blocked_does_not_claim_an_earlier_build_is_live() -> None:
+    first = {**gate([BLOCK]), "previous_build": False}
+    (alert,) = build_alerts(first, None)
+    assert "Nothing has been published yet" in alert.body
+    assert "previous build is still published" not in alert.body
+    (later,) = build_alerts(gate([BLOCK]), None)
+    assert "previous build is still published" in later.body
 
 
 def test_failed_windows_raise_an_ingest_issue_listing_them() -> None:

@@ -85,6 +85,9 @@ jobs:
           for d in $DATASETS; do args+=(-d "$d"); done
           if [ "${MODE:-daily}" = "backfill" ]; then
             pt-energy backfill --start "$START" --end "$END" "${args[@]}"
+            # A range that ends yesterday has nothing for today, and the quality gate would
+            # refuse a stale build: refresh the last day so a backfill can publish.
+            pt-energy daily --lookback 1 "${args[@]}"
           else
             pt-energy daily --lookback "${LOOKBACK:-7}" "${args[@]}"
           fi

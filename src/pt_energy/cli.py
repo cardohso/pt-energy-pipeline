@@ -215,6 +215,7 @@ def transform(
         typer.echo(f"warning  {r.dataset} {r.name}: {r.message}")
     for r in report.known:
         typer.echo(f"known    {r.dataset} {r.name}: {', '.join(r.known)}")
+    report.previous_build = (root / "serving").exists()
     if report.ok:
         swap_directory(candidate, root / "serving")
         report.published = True
@@ -229,7 +230,13 @@ def transform(
     typer.echo(
         f"batch {report.batch_id}: {c['passed']}/{c['checks']} checks passed, "
         f"{c['blocking_failures']} blocking, {c['warnings']} warnings, {c['known']} known; "
-        + ("published" if report.published else "NOT published, previous build kept")
+        + (
+            "published"
+            if report.published
+            else "NOT published, previous build kept"
+            if report.previous_build
+            else "NOT published (no earlier build exists yet)"
+        )
     )
     if not report.ok:
         raise typer.Exit(code=1)

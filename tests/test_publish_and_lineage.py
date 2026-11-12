@@ -86,6 +86,7 @@ def test_a_bad_batch_is_not_published_and_the_last_good_build_stays(tmp_path: Pa
     assert result.exit_code == 1  # type: ignore[attr-defined]
     assert "BLOCKING entsoe_day_ahead_price contract_ranges" in result.stdout  # type: ignore[attr-defined]
     assert "NOT published, previous build kept" in result.stdout  # type: ignore[attr-defined]
+    assert latest(root)["previous_build"] is True
     assert served(root) == good  # byte for byte what was published before
     assert (root / "rejected" / "pt_energy.duckdb").exists()  # kept for inspection
     assert not (root / "serving.build").exists()
@@ -164,6 +165,8 @@ def test_stale_data_blocks_when_the_run_is_late(tmp_path: Path) -> None:
     result = transform(root, "2026-11-12T15:00")
     assert result.exit_code == 1 and "BLOCKING entsoe_actual_load freshness" in result.stdout  # type: ignore[attr-defined]
     assert not (root / "serving").exists()  # nothing was ever published
+    assert "no earlier build exists yet" in result.stdout  # type: ignore[attr-defined]
+    assert latest(root)["previous_build"] is False
 
 
 # --- OpenLineage ----------------------------------------------------------------------------

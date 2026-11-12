@@ -178,6 +178,13 @@ def test_backfill_and_daily_use_the_same_commands_as_the_command_line(wf: dict[s
     assert "pt-energy backfill --start" in run and "pt-energy daily --lookback" in run
 
 
+def test_a_backfill_is_followed_by_a_one_day_refresh_so_it_can_publish(wf: dict[str, Any]) -> None:
+    """A range ending yesterday has no data for today; the freshness checks would refuse it."""
+    run = step(wf, "ingest")["run"]
+    assert run.index("pt-energy backfill") < run.index("pt-energy daily --lookback 1")
+    assert run.count("pt-energy daily") == 2  # the normal daily branch and the refresh
+
+
 def test_the_data_directory_is_the_checked_out_data_repo(wf: dict[str, Any]) -> None:
     for name in ("ingest", "transform", "Open, refresh or close alert issues"):
         assert step(wf, name)["env"]["PT_ENERGY_DATA_DIR"] == "data"

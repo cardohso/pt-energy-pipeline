@@ -51,7 +51,7 @@ the `ssh-key` input and an `env` entry; a test checks this.
 | Failure | What the run does | Visible as |
 |---|---|---|
 | One window cannot be fetched (HTTP 5xx, timeout) | retried 4 times; after 3 failed windows in a row for a dataset, the rest of that dataset is skipped; what worked is stored; the next run retries | run marked failed; issue `alert:ingest_failure` |
-| A blocking quality check fails | the build is refused; `serving/` keeps the previous good tables; the refused build is uploaded as artifact `rejected-build` (14 days); raw data and the report are still pushed | run marked failed; issue `alert:blocking_check` with the failing checks, days and batch |
+| A blocking quality check fails (the very first build included: the alert then says nothing has been published yet) | the build is refused; `serving/` keeps the previous good tables; the refused build is uploaded as artifact `rejected-build` (14 days); raw data and the report are still pushed | run marked failed; issue `alert:blocking_check` with the failing checks, days and batch |
 | A day-ahead price is revised after publication | published if nothing else fails; flagged | issue `alert:price_revision` |
 | The run crashes before producing a report | whatever was fetched is still pushed; no tables change | issue `alert:workflow_failure` |
 | The data push conflicts with a manual edit | fails loudly, nothing overwritten | issue `alert:workflow_failure` |
@@ -65,6 +65,15 @@ failing checks changed**, so a persistent problem does not flood the inbox. A he
 "recovered" and closes it. Reports from an earlier run are ignored (`--since`), so a crash cannot
 be mistaken for a pass or a failure it did not have. The logic is pure and tested with a fake
 GitHub (`tests/test_alerts.py`); the workflow uses the `gh` command line with the job's own token.
+
+## First real run (2026-11-11)
+
+A manual backfill of 2026-10-12 to 2026-11-10 on GitHub fetched 144 windows in about 11 minutes. The
+quality gate then refused to publish, correctly: the range ended yesterday, so the load feed was
+18 hours old and no prices for tomorrow existed. The alert opened its issue by itself. Two fixes
+came out of it: backfill mode now ends with a one-day refresh, and the alert no longer claims a
+previous build is live when none exists. The same run showed E-REDES stalled: its newest complete
+hour was 186 hours old (warning only; its contract allows 168).
 
 ## Known limits
 

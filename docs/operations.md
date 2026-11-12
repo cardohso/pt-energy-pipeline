@@ -20,7 +20,7 @@ repository, or a chat.
    gh secret set ENTSOE_API_TOKEN --repo cardohso/pt-energy-pipeline     # paste the token at the prompt
    rm ./deploy_key ./deploy_key.pub
    ```
-4. Seed the history with a 30-day backfill and run once (about 15 minutes for the backfill):
+4. Seed the history with a 30-day backfill (about 12 minutes on GitHub; it ends with a one-day refresh so the build is fresh enough to publish), then let the schedule take over or run a normal daily run:
    ```bash
    gh workflow run pipeline.yml --repo cardohso/pt-energy-pipeline -f mode=backfill -f start=2026-10-10 -f end=2026-11-08
    gh workflow run pipeline.yml --repo cardohso/pt-energy-pipeline          # a normal daily run
