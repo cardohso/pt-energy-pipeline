@@ -26,7 +26,7 @@ from typing import Any, Protocol
 
 KINDS = ("blocking_check", "ingest_failure", "price_revision", "workflow_failure")
 TITLES = {
-    "blocking_check": "Data pipeline: blocking check failed, previous build still published",
+    "blocking_check": "Data pipeline: blocking quality check failed, build not published",
     "ingest_failure": "Data pipeline: ingestion failed for some windows",
     "price_revision": "Data pipeline: a day-ahead price was revised",
     "workflow_failure": "Data pipeline: the run failed",
@@ -99,8 +99,13 @@ def build_alerts(
             for b in blocking
         ]
         body = (
-            f"The quality gate blocked batch `{gate['batch_id']}`. **The previous build is still "
-            "published**; nothing was replaced.\n\n"
+            f"The quality gate blocked batch `{gate['batch_id']}`. "
+            + (
+                "**The previous build is still published**; nothing was replaced."
+                if gate.get("previous_build", True)
+                else "**Nothing has been published yet**: this was the first build."
+            )
+            + "\n\n"
             f"- Affected days (UTC): {', '.join(gate['affected_days']) or 'none listed'}\n"
             f"- Raw state: `{gate['raw_state_sha256']}`\n"
             f"- Checks: {gate['counts']['passed']} of {gate['counts']['checks']} passed, "

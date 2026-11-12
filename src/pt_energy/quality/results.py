@@ -49,6 +49,7 @@ class GateReport:
     checked_at: str
     results: list[CheckResult]
     published: bool = False
+    previous_build: bool = True  # was there a published build before this run?
 
     @property
     def blocking(self) -> list[CheckResult]:
@@ -79,6 +80,7 @@ class GateReport:
             "checked_at": self.checked_at,
             "ok": self.ok,
             "published": self.published,
+            "previous_build": self.previous_build,
             "counts": {
                 "checks": len(self.results),
                 "passed": sum(r.status == "pass" for r in self.results),
