@@ -43,7 +43,7 @@ than forcing them into a DataFrame framework.
 | `frozen_values` | blocking for load (6 identical hours), warning for E-REDES (12 quarters) | | a stuck sensor or feed | longest run 1 |
 | `eredes_total_sum` | warning | total equals the sum of voltage levels within 1 kWh | internal consistency | 0 |
 | `rejected_rows` | warning | no rows rejected in staging (recent partial hours excepted for 5 days) | publisher defects | 15 over 30 days |
-| `revisions` | warning; any price revision also asks for an issue | other datasets: a revised value moving more than 5% | late data | none |
+| `revisions` | warning; any price revision also asks for an issue | other datasets: a revised value moving more than 5% (changes under 1 MW ignored). Rows that did not exist before are growth, not revisions | late data | none |
 
 E-REDES never blocks on completeness, freshness or its own quality: it is a cross-check, it is
 published 4 or more days late, and its data has real defects. It can still block through the

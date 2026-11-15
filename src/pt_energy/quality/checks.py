@@ -691,22 +691,30 @@ def revisions(ctx: Context) -> list[CheckResult]:
     )
     out: list[CheckResult] = []
     warn = float(cfg["warn_pct"])
+    floor = float(cfg["min_abs_change"])
     for ds in DATASETS:
         mine = [(w, o, n) for d, w, o, n in rows if d == ds]
         is_price = ds in PRICE_DATASETS
         thr = "no revisions" if is_price else f"revisions <= {warn:g}%"
 
-        def moved(o: float | None, n: float | None) -> float:
+        # prices must never move, so no noise floor there
+        ds_floor = 1e-9 if is_price else floor
+
+        def moved(o: float | None, n: float | None, f: float = ds_floor) -> float:
+            """Percent change; a removed value is infinitely large; near-zero noise is ignored."""
             if o is None or n is None:
                 return float("inf")
-            return abs(n - o) / max(abs(o), 1e-9) * 100
+            if abs(n - o) < f:
+                return 0.0
+            return abs(n - o) / max(abs(o), f) * 100
 
-        flagged = [(w, o, n) for w, o, n in mine if is_price or moved(o, n) > warn]
+        # A row that did not exist before is normal growth (tomorrow's prices, a partial day
+        # filling in), not a revision. Only changed or removed values count.
+        existing = [(w, o, n) for w, o, n in mine if o is not None]
+        flagged = [(w, o, n) for w, o, n in existing if moved(o, n) > (0 if is_price else warn)]
         if flagged:
             worst = max(moved(o, n) for _, o, n in flagged)
-            shown = (
-                "added or removed rows" if worst == float("inf") else f"largest change {worst:.1f}%"
-            )
+            shown = "removed rows" if worst == float("inf") else f"largest change {worst:.1f}%"
             out.append(
                 failed(
                     "revisions",
@@ -725,8 +733,8 @@ def revisions(ctx: Context) -> list[CheckResult]:
                     "revisions",
                     ds,
                     "warning",
-                    f"{len(mine)} small revisions" if mine else "no revisions",
-                    observed=str(len(mine)),
+                    f"{len(existing)} small revisions" if existing else "no revisions",
+                    observed=str(len(existing)),
                     threshold=thr,
                 )
             )
