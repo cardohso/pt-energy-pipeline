@@ -46,6 +46,17 @@ def test_fetch_retries_503_with_exponential_backoff_then_succeeds(sleeps: list[f
     assert (response.status_code, attempts, sleeps) == (200, 3, [2.0, 4.0])
 
 
+@pytest.mark.parametrize("status", [500, 501, 520, 524, 599])
+def test_fetch_retries_every_5xx_including_proxy_codes(status: int, sleeps: list[float]) -> None:
+    # The real 2026-11-15 run failed on one unretried "HTTP 599" (a proxy/timeout code).
+    answers = iter([status, 200])
+    client = httpx.Client(
+        transport=httpx.MockTransport(lambda r: httpx.Response(next(answers), content=b"ok"))
+    )
+    response, attempts = fetch(client, SPEC, limiter=no_wait(), sleep=sleeps.append)
+    assert (response.status_code, attempts, sleeps) == (200, 2, [2.0])
+
+
 def test_fetch_honours_retry_after_on_429(sleeps: list[float]) -> None:
     answers = iter([httpx.Response(429, headers={"Retry-After": "7"}), httpx.Response(200)])
     client = httpx.Client(transport=httpx.MockTransport(lambda r: next(answers)))

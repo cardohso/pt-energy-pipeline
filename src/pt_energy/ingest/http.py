@@ -11,7 +11,13 @@ from pt_energy import __version__
 from pt_energy.ingest.models import RequestSpec, TransientError
 
 USER_AGENT = f"pt-energy-pipeline/{__version__} (+https://github.com/cardohso/pt-energy-pipeline)"
-RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+
+
+def is_retryable(status: int) -> bool:
+    """Rate limiting and every server-side error, including non-standard proxy codes (e.g. 599)."""
+    return status == 429 or 500 <= status <= 599
+
+
 MAX_RETRY_AFTER_S = 60.0
 
 Sleep = Callable[[float], None]
@@ -80,7 +86,7 @@ def fetch(
         except httpx.TransportError as exc:
             last = f"{type(exc).__name__}"
         else:
-            if response.status_code not in RETRYABLE_STATUS:
+            if not is_retryable(response.status_code):
                 return response, attempt
             last = f"HTTP {response.status_code}"
             delay = _retry_after(response, delay)
