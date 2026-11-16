@@ -66,7 +66,13 @@ RULES_SCHEMA: dict[str, Any] = _obj(
         ),
         "eredes_total_tolerance_kwh": _NUM,
         "rejected": _obj({"incomplete_hour_grace_days": {"type": "integer", "minimum": 0}}),
-        "revisions": _obj({"warn_pct": _NUM, "lookback_days": {"type": "integer", "minimum": 1}}),
+        "revisions": _obj(
+            {
+                "warn_pct": _NUM,
+                "min_abs_change": _NUM,
+                "lookback_days": {"type": "integer", "minimum": 1},
+            }
+        ),
     }
 )
 

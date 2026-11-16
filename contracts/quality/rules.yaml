@@ -47,4 +47,5 @@ rejected:
 
 revisions:
   warn_pct: 5                        # warning when a revised value moves by more than this
+  min_abs_change: 1                  # MW; smaller moves are noise (a 0.0 -> 0.3 is not 3e12 %)
   lookback_days: 7                   # matches the daily refetch window

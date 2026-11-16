@@ -611,6 +611,55 @@ def test_a_small_load_revision_is_normal_and_a_large_one_warns(tmp_path: Path) -
     assert res.status == "fail" and not res.opens_issue and large.report.ok
 
 
+def revisions_for(rows: list[tuple[str, str, float | None, float | None]]) -> list[CheckResult]:
+    """Run only the revisions check against hand-made meta.revisions rows (all detected now)."""
+    import duckdb
+
+    from pt_energy.quality.checks import Context, revisions
+    from pt_energy.quality.rules import load_rules
+
+    con = duckdb.connect()
+    con.execute("create schema meta")
+    con.execute(
+        "create table meta.revisions(dataset varchar, raw_window varchar, "
+        "old_value double, new_value double, detected_at timestamp)"
+    )
+    for ds, window, old, new in rows:
+        con.execute(
+            "insert into meta.revisions values (?, ?, ?, ?, ?)",
+            [ds, window, old, new, NOW.replace(tzinfo=None)],
+        )
+    rules = load_rules(CONTRACTS / "quality" / "rules.yaml")
+    return revisions(Context(con, NOW, rules, {}))
+
+
+def test_rows_added_later_are_growth_not_a_revision() -> None:
+    # tomorrow's prices arriving, and a partial generation day filling in: nothing existed before
+    out = revisions_for([(PRICE, "2026-11-10", None, 90.0), (GEN, "2026-11-09", None, 1200.0)])
+    price = next(r for r in out if r.dataset == PRICE)
+    assert price.status == "pass" and not price.opens_issue
+    assert next(r for r in out if r.dataset == GEN).status == "pass"
+
+
+def test_a_changed_price_still_opens_an_issue_and_a_removed_one_does_too() -> None:
+    changed = revisions_for([(PRICE, "2026-11-09", 80.0, 80.01)])
+    (res,) = [r for r in changed if r.dataset == PRICE]
+    assert res.status == "fail" and res.opens_issue and res.affected == ["2026-11-09"]
+    removed = revisions_for([(PRICE, "2026-11-09", 80.0, None)])
+    assert next(r for r in removed if r.dataset == PRICE).opens_issue
+
+
+def test_near_zero_generation_changes_are_noise_but_a_real_one_warns() -> None:
+    # 0.0 -> 0.3 MW used to read as a 3e12 % revision
+    noise = revisions_for([(GEN, "2026-11-09", 0.0, 0.3)])
+    assert next(r for r in noise if r.dataset == GEN).status == "pass"
+    real = revisions_for([(GEN, "2026-11-09", 100.0, 120.0)])
+    (res,) = [r for r in real if r.dataset == GEN]
+    assert res.status == "fail" and not res.opens_issue and "20.0%" in res.message
+    gone = revisions_for([(GEN, "2026-11-09", 100.0, None)])
+    assert "removed rows" in next(r for r in gone if r.dataset == GEN).message
+
+
 # --- E-REDES quirks never block; known issues -----------------------------------------------
 
 
