@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portugal Power Pipeline</title>
+  <meta name="description" content="Portuguese electricity generation, demand and day-ahead prices from a scheduled, quality-gated batch pipeline, with a data-health panel.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#health">Skip to data health</a>
+  <header class="top">
+    <div class="wrap">
+      <h1>Portugal electricity, last 7 days</h1>
+      <p class="lede" id="lede">Loading…</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section aria-labelledby="kpi-h">
+      <h2 id="kpi-h" class="sr">Headline numbers</h2>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <section class="card" aria-labelledby="gen-h">
+      <h2 id="gen-h">Generation by source</h2>
+      <p class="sub">Hourly MW, stacked, UTC. ENTSO-E actual generation.</p>
+      <div class="chart" id="chart-gen"></div>
+    </section>
+
+    <section class="card" aria-labelledby="dem-h">
+      <h2 id="dem-h">Demand</h2>
+      <p class="sub">Hourly MW, UTC. ENTSO-E actual load.</p>
+      <div class="chart" id="chart-dem"></div>
+    </section>
+
+    <section class="card" aria-labelledby="pri-h">
+      <h2 id="pri-h">Day-ahead price</h2>
+      <p class="sub">EUR/MWh, hourly average of the market intervals, UTC. OMIE, Portugal.</p>
+      <div class="chart" id="chart-pri"></div>
+    </section>
+
+    <section class="card health" id="health" aria-labelledby="health-h">
+      <h2 id="health-h">Data health</h2>
+      <div id="health-body"></div>
+    </section>
+
+    <section class="card" aria-labelledby="about-h">
+      <h2 id="about-h">About these numbers</h2>
+      <p>A scheduled pipeline fetches the raw files, keeps every version, rebuilds the tables, and runs a
+        quality gate before anything is published. If a blocking check fails, this page keeps showing the
+        previous good build and says so above. Each headline number has a <em>Trace</em> button that lists
+        the exact raw files it was computed from.</p>
+      <p><a href="https://github.com/cardohso/pt-energy-pipeline">Code, contracts and documentation</a>
+        (MIT).</p>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <h2>Sources</h2>
+      <ul id="credits"></ul>
+    </div>
+  </footer>
+
+  <dialog id="trace" aria-labelledby="trace-title">
+    <form method="dialog"><button class="close" aria-label="Close">Close</button></form>
+    <h2 id="trace-title"></h2>
+    <div id="trace-body"></div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

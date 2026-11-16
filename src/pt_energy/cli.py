@@ -12,6 +12,7 @@ import typer
 from pt_energy import __version__
 from pt_energy.alerts import GhCli, apply_alerts, build_alerts, latest_ingest_report, latest_json
 from pt_energy.contracts import check_contracts, freeze
+from pt_energy.dashboard.export import build_export, write_export
 from pt_energy.ingest import http as ingest_http
 from pt_energy.ingest.runner import (
     RunReport,
@@ -34,6 +35,8 @@ contracts_app = typer.Typer(help="Data contract checks.", no_args_is_help=True)
 app.add_typer(contracts_app, name="contracts")
 lineage_app = typer.Typer(help="Lineage diagram.", no_args_is_help=True)
 app.add_typer(lineage_app, name="lineage")
+dashboard_app = typer.Typer(help="Static dashboard.", no_args_is_help=True)
+app.add_typer(dashboard_app, name="dashboard")
 
 ContractsDir = typer.Option(Path("contracts"), "--contracts-dir", help="Contracts directory.")
 DataDir = typer.Option(
@@ -121,6 +124,24 @@ def lineage_diagram(
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text, encoding="utf-8")
     typer.echo(f"wrote {out}")
+
+
+@dashboard_app.command("build")
+def dashboard_build(
+    data_dir: Path | None = DataDir,
+    site_dir: Path = typer.Option(Path("dashboard"), "--site-dir", help="Static page sources."),
+    out: Path = typer.Option(Path("site"), "--out", help="Where the finished site is written."),
+) -> None:
+    """Write the static dashboard (page plus data/dashboard.json) from the published tables."""
+    root = data_dir or Path(os.environ.get("PT_ENERGY_DATA_DIR", "data"))
+    if not (root / "serving" / "model").exists():
+        typer.echo(f"error: nothing published in {root}/serving yet", err=True)
+        raise typer.Exit(code=2)
+    if out.exists():
+        shutil.rmtree(out)
+    shutil.copytree(site_dir, out, ignore=shutil.ignore_patterns(".gitkeep"))
+    path = write_export(build_export(root), out)
+    typer.echo(f"wrote {path} ({path.stat().st_size // 1024} KB) and the page in {out}/")
 
 
 @app.command()
