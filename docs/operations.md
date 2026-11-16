@@ -26,6 +26,9 @@ repository, or a chat.
    gh workflow run pipeline.yml --repo cardohso/pt-energy-pipeline          # a normal daily run
    ```
 
+5. Optional, makes the dashboard public: turn on GitHub Pages (Settings, Pages, Source: GitHub
+   Actions) and set the variable `PAGES_ENABLED` to `true`. Details in [dashboard.md](dashboard.md).
+
 ## Running by hand
 
 ```bash

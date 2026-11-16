@@ -140,3 +140,52 @@ jobs:
         run: |
           echo "ingest: ${{ steps.ingest.outcome }}, transform: ${{ steps.transform.outcome }}"
           exit 1
+
+  # Publishing the dashboard makes it public, so it is opt-in: set the repository variable
+  # PAGES_ENABLED to "true" (and Settings > Pages > Source: GitHub Actions) to turn it on.
+  # It runs even when the pipeline step failed: a refused build leaves the previous good tables
+  # in place, and the page then says so in its data-health panel.
+  dashboard:
+    needs: pipeline
+    if: ${{ always() && needs.pipeline.result != 'cancelled' && vars.PAGES_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out the data repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.DATA_REPOSITORY }}
+          ssh-key: ${{ secrets.DATA_DEPLOY_KEY }}
+          path: data
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Build the site
+        env:
+          PT_ENERGY_DATA_DIR: data
+        run: pt-energy dashboard build --out site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4
