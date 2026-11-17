@@ -597,11 +597,11 @@ def test_a_revised_price_asks_for_an_issue_and_blocks_while_the_sources_disagree
 
 def test_a_small_load_revision_is_normal_and_a_large_one_warns(tmp_path: Path) -> None:
     def bump(factor: float) -> Callable[[bytes], bytes]:
+        # every value of the day moves: what matters is how much of the day's energy was revised
         return lambda b: re.sub(
             rb"<quantity>([\d.]+)<",
             lambda m: b"<quantity>" + str(round(float(m[1]) * factor, 1)).encode() + b"<",
             b,
-            count=1,
         )
 
     small = revise(tmp_path / "a", LOAD, "2026-11-08", bump(1.02))
@@ -609,10 +609,17 @@ def test_a_small_load_revision_is_normal_and_a_large_one_warns(tmp_path: Path) -
     large = revise(tmp_path / "b", LOAD, "2026-11-08", bump(1.20))
     (res,) = find(large.report, "revisions", LOAD)
     assert res.status == "fail" and not res.opens_issue and large.report.ok
+    assert res.affected == ["2026-11-08"]
 
 
-def revisions_for(rows: list[tuple[str, str, float | None, float | None]]) -> list[CheckResult]:
-    """Run only the revisions check against hand-made meta.revisions rows (all detected now)."""
+def revisions_for(
+    rows: list[tuple[str, str, float | None, float | None]],
+    day_totals: dict[str, float] | None = None,
+) -> list[CheckResult]:
+    """Run only the revisions check against hand-made meta.revisions rows (all detected now).
+
+    ``day_totals`` gives each window's total generation and load (MW summed over the day).
+    """
     import duckdb
 
     from pt_energy.quality.checks import Context, revisions
@@ -620,10 +627,20 @@ def revisions_for(rows: list[tuple[str, str, float | None, float | None]]) -> li
 
     con = duckdb.connect()
     con.execute("create schema meta")
+    con.execute("create schema model")
     con.execute(
         "create table meta.revisions(dataset varchar, raw_window varchar, "
         "old_value double, new_value double, detected_at timestamp)"
     )
+    con.execute(
+        "create table model.generation_by_source(raw_window varchar, direction varchar, generation_mw double)"
+    )
+    con.execute("create table model.demand(raw_window varchar, source varchar, demand_mw double)")
+    for window, total in (day_totals or {}).items():
+        con.execute(
+            "insert into model.generation_by_source values (?, 'generation', ?)", [window, total]
+        )
+        con.execute("insert into model.demand values (?, 'entsoe', ?)", [window, total])
     for ds, window, old, new in rows:
         con.execute(
             "insert into meta.revisions values (?, ?, ?, ?, ?)",
@@ -649,15 +666,28 @@ def test_a_changed_price_still_opens_an_issue_and_a_removed_one_does_too() -> No
     assert next(r for r in removed if r.dataset == PRICE).opens_issue
 
 
-def test_near_zero_generation_changes_are_noise_but_a_real_one_warns() -> None:
-    # 0.0 -> 0.3 MW used to read as a 3e12 % revision
-    noise = revisions_for([(GEN, "2026-11-09", 0.0, 0.3)])
-    assert next(r for r in noise if r.dataset == GEN).status == "pass"
-    real = revisions_for([(GEN, "2026-11-09", 100.0, 120.0)])
-    (res,) = [r for r in real if r.dataset == GEN]
-    assert res.status == "fail" and not res.opens_issue and "20.0%" in res.message
-    gone = revisions_for([(GEN, "2026-11-09", 100.0, None)])
-    assert "removed rows" in next(r for r in gone if r.dataset == GEN).message
+def test_generation_revisions_are_measured_against_the_days_total() -> None:
+    day = {"2026-11-09": 150_000.0}
+    # many small plants revised by tens of MW (a "2920 %" change on a 0.7 MW base) is routine
+    routine = revisions_for(
+        [(GEN, "2026-11-09", 0.7, 21.2)] + [(GEN, "2026-11-09", 100.0, 120.0)] * 100, day
+    )
+    assert next(r for r in routine if r.dataset == GEN).status == "pass"  # 2,050 MW of 150,000
+    # a day where 15% of the energy moved is not routine
+    big = revisions_for([(GEN, "2026-11-09", 1000.0, 1225.0)] * 100, day)
+    (res,) = [r for r in big if r.dataset == GEN]
+    assert res.status == "fail" and not res.opens_issue and res.affected == ["2026-11-09"]
+    assert "15.0%" in res.message
+    # rows that vanished count at their old size
+    gone = revisions_for([(GEN, "2026-11-09", 1600.0, None)] * 100, day)
+    assert next(r for r in gone if r.dataset == GEN).status == "fail"
+
+
+def test_a_day_without_a_total_is_not_flagged_and_new_rows_never_count() -> None:
+    out = revisions_for([(GEN, "2026-11-09", 5.0, 900.0), (GEN, "2026-11-09", None, 5000.0)], {})
+    assert next(r for r in out if r.dataset == GEN).status == "pass"  # nothing to measure against
+    out = revisions_for([(GEN, "2026-11-09", None, 5000.0)], {"2026-11-09": 100.0})
+    assert next(r for r in out if r.dataset == GEN).status == "pass"
 
 
 # --- E-REDES quirks never block; known issues -----------------------------------------------
