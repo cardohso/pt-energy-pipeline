@@ -681,7 +681,38 @@ def rejected_rows(ctx: Context) -> list[CheckResult]:
     return [passed("rejected_rows", ds, "warning", "no rows rejected", observed="0", threshold=thr)]
 
 
+# Day totals that a revision is measured against. ENTSO-E revises many small values every day
+# (preliminary figures become final); what matters is how much of the day's energy moved, not how
+# big a change is next to a plant that produced 0.3 MW.
+REVISION_SCALE_SQL = {
+    "entsoe_actual_generation": "select raw_window, sum(generation_mw) "
+    "from model.generation_by_source where direction = 'generation' group by 1",
+    "entsoe_actual_load": "select raw_window, sum(demand_mw) "
+    "from model.demand where source = 'entsoe' group by 1",
+}
+
+
+def _window_revisions(
+    mine: list[tuple[str, float | None, float | None]], totals: dict[str, float]
+) -> list[tuple[str, float]]:
+    """(window, percent of that window's total that was revised), for windows with changes."""
+    moved: dict[str, float] = {}
+    for w, o, n in mine:
+        if o is None:
+            continue  # new row: growth, not a revision
+        moved[w] = moved.get(w, 0.0) + abs((n if n is not None else 0.0) - o)
+    return [(w, 100 * m / totals[w]) for w, m in sorted(moved.items()) if totals.get(w)]
+
+
 def revisions(ctx: Context) -> list[CheckResult]:
+    """Revisions of published values.
+
+    Prices must never move: any changed or removed price asks for an issue. Rows that did not
+    exist before are growth (tomorrow's prices, a partial day filling in) and never count. For
+    ENTSO-E load and generation the check warns when the revisions of one day add up to more than
+    ``window_warn_pct`` of that day's total. Other datasets compare each value with its old value,
+    ignoring moves smaller than ``min_abs_change``.
+    """
     cfg = ctx.rules["revisions"]
     since = (ctx.now - timedelta(days=int(cfg["lookback_days"]))).timestamp()
     rows = ctx.q(
@@ -691,39 +722,49 @@ def revisions(ctx: Context) -> list[CheckResult]:
     )
     out: list[CheckResult] = []
     warn = float(cfg["warn_pct"])
+    window_warn = float(cfg["window_warn_pct"])
     floor = float(cfg["min_abs_change"])
     for ds in DATASETS:
         mine = [(w, o, n) for d, w, o, n in rows if d == ds]
-        is_price = ds in PRICE_DATASETS
-        thr = "no revisions" if is_price else f"revisions <= {warn:g}%"
-
-        # prices must never move, so no noise floor there
-        ds_floor = 1e-9 if is_price else floor
-
-        def moved(o: float | None, n: float | None, f: float = ds_floor) -> float:
-            """Percent change; a removed value is infinitely large; near-zero noise is ignored."""
-            if o is None or n is None:
-                return float("inf")
-            if abs(n - o) < f:
-                return 0.0
-            return abs(n - o) / max(abs(o), f) * 100
-
-        # A row that did not exist before is normal growth (tomorrow's prices, a partial day
-        # filling in), not a revision. Only changed or removed values count.
         existing = [(w, o, n) for w, o, n in mine if o is not None]
-        flagged = [(w, o, n) for w, o, n in existing if moved(o, n) > (0 if is_price else warn)]
-        if flagged:
-            worst = max(moved(o, n) for _, o, n in flagged)
+        is_price = ds in PRICE_DATASETS
+        if is_price:
+            thr = "no revisions"
+            flagged = [(w, 100.0) for w, o, n in existing if n is None or n != o]
+            detail = f"{len(flagged)} revised prices"
+        elif ds in REVISION_SCALE_SQL:
+            thr = f"a day's revisions <= {window_warn:g}% of its total"
+            totals = {w: float(t) for w, t in ctx.q(REVISION_SCALE_SQL[ds])}
+            per_window = _window_revisions(mine, totals)
+            flagged = [(w, pct) for w, pct in per_window if pct > window_warn]
+            detail = (
+                f"{len(flagged)} days revised by more than {window_warn:g}% of their total "
+                f"(largest {max((pct for _, pct in flagged), default=0):.1f}%)"
+            )
+        else:
+            thr = f"revisions <= {warn:g}%"
+
+            def moved(o: float, n: float | None) -> float:
+                if n is None:
+                    return float("inf")
+                if abs(n - o) < floor:
+                    return 0.0
+                return abs(n - o) / max(abs(o), floor) * 100
+
+            flagged = [(w, moved(o, n)) for w, o, n in existing if moved(o, n) > warn]
+            worst = max((pct for _, pct in flagged), default=0.0)
             shown = "removed rows" if worst == float("inf") else f"largest change {worst:.1f}%"
+            detail = f"{len(flagged)} revised values ({shown})"
+        if flagged:
             out.append(
                 failed(
                     "revisions",
                     ds,
                     "warning",
-                    f"{len(flagged)} revised values ({shown})",
-                    observed=f"{len(flagged)} revised",
+                    detail,
+                    observed=f"{len(flagged)} flagged",
                     threshold=thr,
-                    affected=_days([w for w, _, _ in flagged]),
+                    affected=_days([w for w, _ in flagged]),
                     opens_issue=is_price,
                 )
             )

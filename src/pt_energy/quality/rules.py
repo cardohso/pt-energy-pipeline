@@ -70,6 +70,7 @@ RULES_SCHEMA: dict[str, Any] = _obj(
             {
                 "warn_pct": _NUM,
                 "min_abs_change": _NUM,
+                "window_warn_pct": _NUM,
                 "lookback_days": {"type": "integer", "minimum": 1},
             }
         ),
