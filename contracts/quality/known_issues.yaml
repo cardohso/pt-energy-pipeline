@@ -17,3 +17,14 @@
     E-REDES published 01:00 to 01:45 UTC twice with different values and omitted the last three
     quarters of the day. All copies are rejected because there is no way to tell which is right.
   added: "2026-11-09"
+- id: omie-2026-11-21-and-23-no-pt-file
+  dataset: omie_day_ahead_price
+  checks: [completeness]
+  dates: ["2026-11-20", "2026-11-21", "2026-11-22", "2026-11-23"]
+  reason: >-
+    OMIE published no marginalpdbcpt file for the delivery days 2026-11-21 and 2026-11-23 (its own
+    file listing skips them; the Spanish marginalpdbc file exists for both). Checked on 2026-11-24
+    and still missing, so the Portugal series has two one-day gaps. The check reports a gap by the
+    UTC day of its first missing interval (11-20 and 11-22); all four days are listed so the entry
+    reads the same from either side. ENTSO-E day-ahead prices cover those days.
+  added: "2026-11-24"
